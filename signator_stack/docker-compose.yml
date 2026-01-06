@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  yara_signator_postgres:
+    image: postgres:13.1
+    container_name: yara_signator_postgres
+    restart: unless-stopped
+    command:
+      "-c shared_buffers=256MB
+      -c max_connections=200"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+  capstone_server:
+    container_name: capstone_server
+    build: ./capstone_server
+    restart: unless-stopped
+
+  yara_signator:
+    depends_on:
+      - yara_signator_postgres
+      - capstone_server
+    container_name: yara_signator
+    build: ./yara_signator
+    restart: unless-stopped
+    volumes:
+      - apt_datastore:/root/datastore
+
+volumes:
+  apt_datastore:
+    external: true
+    name: apt_apt_data
+
+

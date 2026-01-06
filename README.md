@@ -261,6 +261,37 @@ bash scripts/apt_docker.sh python3 scripts/yara_folder_coverage.py \
     - `detect_Redline_Stealer`
     - `pe_no_import_table`
 
+## YARA-Signator로 HA mdmp 기반 룰 생성(고급)
+
+YARA-Signator는 **PostgreSQL + capstone_server + SMDA 리포트**를 요구하는 무거운 파이프라인입니다. (요약/전제는 upstream 문서 참고)
+
+이 프로젝트는 이를 Docker로 돌릴 수 있도록 `signator_stack/`(compose)와 `scripts/signator_prepare_ha_mdmp.py`(SMDA 리포트 생성)를 제공합니다.
+
+### 1) 준비: mdmp → curated repo + SMDA reports
+
+```bash
+# (예시) HA mdmp 폴더 5개, 폴더당 mdmp 10개만 샘플링해서 준비
+bash scripts/apt_docker.sh python3 scripts/signator_prepare_ha_mdmp.py \
+  --src /data/ha_dumps_unz \
+  --datastore /data \
+  --family win.amadey \
+  --max-folders 5 \
+  --max-files-per-folder 10
+```
+
+생성되는 경로(도커 볼륨 /data):
+- curated repo: `/data/malpedia/win.amadey/ha_mdmp/...`
+- smda reports: `/data/smda_report_output/*.smda`
+- signator output: `/data/yara-output/` (signator 실행 후 생성)
+
+### 2) 실행: signator stack
+
+```bash
+docker compose -f signator_stack/docker-compose.yml up --build
+```
+
+완료되면 `/data/yara-output/` 아래에 생성된 룰/리포트를 확인하세요.
+
 ## 문제 해결(Troubleshooting)
 
 - **다운로드가 끊김/차단되는 느낌**: `.env`에서 `MB_SLEEP_*`를 늘리고 `MB_RETRY_*`를 키우세요.

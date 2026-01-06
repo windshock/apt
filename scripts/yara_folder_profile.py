@@ -12,6 +12,7 @@ DEFAULT_BUCKETS = {
         "pe_detect_tls_callbacks",
         "pe_no_import_table",
         "DetectEncryptedVariants",
+        "golang_bin_JCorn_CSC846",
         "meth_stackstrings",
         "Suspicious_Process",
         "Sus_CMD_Powershell_Usage",
@@ -21,7 +22,6 @@ DEFAULT_BUCKETS = {
         "cobalt_strike_tmp01925d3f",
         "RANSOMWARE",
         "ScanStringsInsocks5systemz",
-        "golang_bin_JCorn_CSC846",
     },
     # "하": family-ish / more specific
     "low": {

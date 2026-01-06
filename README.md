@@ -261,6 +261,53 @@ bash scripts/apt_docker.sh python3 scripts/yara_folder_coverage.py \
     - `detect_Redline_Stealer`
     - `pe_no_import_table`
 
+### YaraHub 결과를 “탐지율”이 아니라 “프로파일(상/중/하)”로 읽기
+
+YaraHub(=Yaraify) 룰은 **샘플 패밀리 확증용**이라기보다, HA region/실행 메모리를 **성격(행위/구조)으로 태깅**하는 데에 유용합니다.
+
+- **상(High, Memory-centric 신호)**: 로더/언패커/침투형 메모리에서 흔한 generic 신호  
+  예: `meth_get_eip`, `pe_detect_tls_callbacks`, `pe_no_import_table`, `Sus_CMD_Powershell_Usage`, `golang_bin_JCorn_CSC846`, `DetectEncryptedVariants`
+- **중(Mid, 프레임워크/캠페인 흔적)**: 공격 체인/툴 흔적(예: Cobalt Strike) 또는 과잉 태그 가능성이 있는 행위 카테고리  
+  예: `cobalt_strike_tmp01925d3f`, `RANSOMWARE`, `ScanStringsInsocks5systemz`
+- **하(Low, 패밀리 단서)**: 특정 패밀리/스틸러 계열 등 “확증”에 가까운 룰  
+  예: `StealcV2`, `aachum_Stealcv2`, `win_lumma_generic`
+
+핵심은:
+- **상/중은 “이 메모리가 어떤 성격인가”를 설명하는 태그**로 사용
+- **패밀리 확증은 하위권 룰(Malpedia/전용 룰 포함)로만** 판단
+
+#### SHA256 기준으로 프로파일 합치기(권장)
+
+HA `mdmp_extracted`의 `dump_folder`는 보통 `<sha256>_<dumpid>_memory` 형태이므로, **`dumpid` 단위가 아니라 sha256 단위로 묶어서** 상/중/하 조합을 보길 권장합니다.
+
+이를 위해 `scripts/yara_folder_profile.py`를 사용합니다:
+
+```bash
+# (1) 먼저, 스캔 결과에 실제로 등장한 룰들로 “버킷 템플릿(JSON)” 생성
+bash scripts/apt_docker.sh bash -lc '
+base=/data/scan_all_rulesets/<timestamp>
+python3 /work/scripts/yara_folder_profile.py \
+  --in "$base/scans/yarahub.txt" \
+  --root /data/mdmp_extracted \
+  --out /tmp/out.csv \
+  --write-buckets-template "$base/yarahub_buckets.json"
+'
+
+# (2) $base/yarahub_buckets.json 을 열어서 high/mid/low에 룰을 재분류
+
+# (3) sha256 기준으로 high+mid+low 모두 포함한 그룹 찾기
+bash scripts/apt_docker.sh bash -lc '
+base=/data/scan_all_rulesets/<timestamp>
+python3 /work/scripts/yara_folder_profile.py \
+  --in "$base/scans/yarahub.txt" \
+  --root /data/mdmp_extracted \
+  --out "$base/yarahub_sha256_profile.csv" \
+  --group sha256 \
+  --buckets "$base/yarahub_buckets.json" \
+  --print-all3
+'
+```
+
 ## YARA-Signator로 HA mdmp 기반 룰 생성(고급)
 
 YARA-Signator는 **PostgreSQL + capstone_server + SMDA 리포트**를 요구하는 무거운 파이프라인입니다. (요약/전제는 upstream 문서 참고)

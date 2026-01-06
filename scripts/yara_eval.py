@@ -142,6 +142,16 @@ def main():
     scanned = 0
     matched = 0
     started = time.time()
+    if args.verbose:
+        log.info(
+            "START rules=%s target=%s scan_list=%s timeout=%s fast=%s out=%s",
+            rules,
+            str(target) if target is not None else "",
+            str(scan_list) if scan_list is not None else "",
+            str(timeout_s) if timeout_s is not None else "none",
+            str(args.fast),
+            str(out),
+        )
     with out.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["path", "matched", "matches", "error"])
         w.writeheader()
@@ -175,6 +185,11 @@ def main():
                     "error": err or "",
                 }
             )
+
+    if args.verbose:
+        elapsed = time.time() - started
+        rate = scanned / elapsed if elapsed > 0 else 0.0
+        log.info("DONE scanned=%d matched=%d rate=%.1f/s", scanned, matched, rate)
 
     print(f"Scanned: {scanned}")
     print(f"Matched files: {matched} ({(matched / scanned * 100.0) if scanned else 0:.2f}%)")

@@ -360,4 +360,36 @@ bash scripts/apt_docker.sh bash scripts/vol_yarascan.sh \
 - **HA 메모리덤프가 HTML로 내려옴**: 보통 쿠키 만료/권한 문제입니다. `HA_COOKIE`를 갱신하세요.
 - **호스트 백신 충돌**: 호스트 디렉터리(`.`)에 샘플이 떨어지지 않게 하고 `/data` 볼륨만 사용하세요.
 
+## (옵션) THOR Lite로 스캔하기
+
+THOR Lite는 Nextron Systems의 무료 IOC/YARA 스캐너입니다. ([THOR Lite 다운로드/라이선스 안내](https://www.nextron-systems.com/thor-lite/))
+
+이 프로젝트는 **바이너리를 레포에 포함(커밋)하지 않고**, Docker 볼륨(`/data`)에 둔 THOR Lite를 실행할 수 있게 래퍼만 제공합니다.
+
+### 1) THOR Lite 준비 (/data)
+
+- THOR Lite를 다운로드/압축 해제 후, Linux 바이너리를 Docker 볼륨에 넣으세요:
+  - `/data/thor-lite/thor-lite` (이름은 달라도 됨)
+- 실행 권한 부여:
+
+```bash
+bash scripts/apt_docker.sh bash -lc 'chmod +x /data/thor-lite/thor-lite'
+```
+
+### 2) 도움말 확인
+
+```bash
+bash scripts/apt_docker.sh bash scripts/thor_lite.sh -- --help
+```
+
+### 3) (예시) HA 추출물 / 다운로드 샘플 스캔
+
+```bash
+# HA mdmp 추출물(고신호 영역)
+bash scripts/apt_docker.sh bash scripts/thor_lite.sh -- --folder /data/mdmp_extracted
+
+# 다운로드 샘플(100개 코퍼스)
+bash scripts/apt_docker.sh bash scripts/thor_lite.sh -- --folder /data/unzip_amd_100
+```
+
 

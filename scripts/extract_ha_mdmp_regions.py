@@ -26,31 +26,52 @@ def _parse_protect_from_name(p: Path) -> int | None:
         return None
 
 
-def _is_pe_header_region(p: Path) -> bool:
+def _find_embedded_pe(p: Path, scan_bytes: int) -> tuple[bool, int | None, int | None]:
     """
-    Heuristic: region starts with 'MZ' and has a valid 'PE\\0\\0' signature at e_lfanew.
-    This does NOT guarantee a full reconstructable PE, but it usually identifies module
-    header pages/regions.
+    Heuristic: search within the first scan_bytes for an embedded PE header:
+      - find 'MZ' at some offset
+      - read e_lfanew at (offset + 0x3c)
+      - verify 'PE\\0\\0' at (offset + e_lfanew)
+
+    Returns: (found, mz_offset, pe_offset)
     """
-    # Only read the minimum necessary bytes (regions can be large).
     try:
         with p.open("rb") as f:
-            hdr = f.read(0x400)
-            if len(hdr) < 0x100:
-                return False
-            if hdr[0:2] != b"MZ":
-                return False
-            e_lfanew = int.from_bytes(hdr[0x3C:0x40], "little", signed=False)
-            if e_lfanew <= 0:
-                return False
-            if e_lfanew + 4 <= len(hdr):
-                sig = hdr[e_lfanew : e_lfanew + 4]
-            else:
-                f.seek(e_lfanew)
-                sig = f.read(4)
-            return sig == b"PE\x00\x00"
+            data = f.read(max(0, int(scan_bytes)))
     except Exception:
-        return False
+        return False, None, None
+
+    if len(data) < 0x100:
+        return False, None, None
+
+    off = 0
+    while True:
+        i = data.find(b"MZ", off)
+        if i < 0:
+            return False, None, None
+        # Need at least DOS header fields
+        if i + 0x40 <= len(data):
+            e_lfanew = int.from_bytes(data[i + 0x3C : i + 0x40], "little", signed=False)
+            # Conservative sanity bound: within scan window, not too tiny/huge
+            if 0 < e_lfanew < scan_bytes:
+                pe = i + e_lfanew
+                if pe + 4 <= len(data) and data[pe : pe + 4] == b"PE\x00\x00":
+                    return True, i, pe
+        off = i + 2
+
+
+def _is_pe_header_region(p: Path, scan_bytes: int, mode: str) -> bool:
+    """
+    mode:
+      - start: require the region starts with a PE ('MZ' at offset 0)
+      - anywhere: allow embedded PE headers (common in HA region blobs)
+    """
+    if mode == "start":
+        found, mz, _pe = _find_embedded_pe(p, scan_bytes=scan_bytes)
+        return bool(found and mz == 0)
+    # default: anywhere
+    found, _mz, _pe = _find_embedded_pe(p, scan_bytes=scan_bytes)
+    return bool(found)
 
 
 def _safe_link_or_copy(src: Path, dst: Path, link: bool):
@@ -71,6 +92,18 @@ def main():
     ap.add_argument("--src", required=True, help="Source folder containing many *.mdmp region files.")
     ap.add_argument("--out", required=True, help="Output folder (will create dlllist/ and malfind/ subfolders).")
     ap.add_argument("--rwx-only", action="store_true", help="Only include PAGE_EXECUTE_READWRITE (0x40) regions.")
+    ap.add_argument(
+        "--pe-mode",
+        choices=["anywhere", "start"],
+        default="anywhere",
+        help="How to detect PE header regions: embedded anywhere (default) or only if region starts with MZ.",
+    )
+    ap.add_argument(
+        "--pe-scan-bytes",
+        type=int,
+        default=2_000_000,
+        help="How many bytes to scan for embedded PE headers (default: 2,000,000).",
+    )
     ap.add_argument("--link", action="store_true", help="Symlink outputs to originals (default).")
     ap.add_argument("--copy", action="store_true", help="Copy outputs instead of symlinking.")
     args = ap.parse_args()
@@ -105,7 +138,7 @@ def main():
                 # Windows PAGE_* protections are enumerated values, not bitmasks.
                 is_exec = protect in EXEC_PROTECT_SET
 
-        is_pe = _is_pe_header_region(f)
+        is_pe = _is_pe_header_region(f, scan_bytes=int(args.pe_scan_bytes), mode=str(args.pe_mode))
 
         # "loaded module" proxy: PE header region
         if is_pe:

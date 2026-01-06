@@ -15,6 +15,10 @@ while IFS='=' read -r name _; do
   esac
 done < <(env)
 
-docker compose run --rm "${extra_env[@]}" apt bash
+if ((${#extra_env[@]})); then
+  docker compose run --rm "${extra_env[@]}" apt bash
+else
+  docker compose run --rm apt bash
+fi
 
 

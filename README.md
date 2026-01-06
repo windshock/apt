@@ -242,6 +242,25 @@ bash scripts/apt_docker.sh python3 scripts/yara_folder_coverage.py \
   --print-undetected
 ```
 
+### (예시) “최소 룰 조합으로 최고 탐지율” 찾기
+
+아래는 **이 프로젝트에서 실제로 돌린 한 번의 실험 결과 예시**입니다. 데이터셋/집계 기준이 바뀌면 숫자는 달라질 수 있습니다.
+
+- **HA 메모리 덤프(폴더 기준)**: `/data/ha_dumps_unz/<dump_folder>/...*.mdmp` 에서 **폴더 안에 1개라도 매치가 있으면 탐지로 카운트**
+  - 결과: **60/63 폴더 탐지(95.24%)**
+  - **최소 룰 조합(최고치 달성)**:
+    - `DetectEncryptedVariants`
+    - `meth_get_eip`
+
+- **다운로드 샘플(sha 기준)**: `/data/unzip_amd_100`의 top-level `exe/zip/ps1/hta` + `_nested` 내부 파일(아카이브 컨테이너 제외) 중 **어느 하나라도 매치가 있으면 해당 sha를 탐지로 카운트**
+  - 결과: **71/100 sha 탐지(71.0%)**
+  - **최소 룰 조합(최고치 달성)**:
+    - `golang_bin_JCorn_CSC846`
+    - `Sus_CMD_Powershell_Usage`
+    - `pe_detect_tls_callbacks`
+    - `detect_Redline_Stealer`
+    - `pe_no_import_table`
+
 ## 문제 해결(Troubleshooting)
 
 - **다운로드가 끊김/차단되는 느낌**: `.env`에서 `MB_SLEEP_*`를 늘리고 `MB_RETRY_*`를 키우세요.

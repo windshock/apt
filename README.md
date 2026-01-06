@@ -330,6 +330,30 @@ bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
   --out /data/yara_eval_mdmp_extracted_win.amadey.csv
 ```
 
+## (고급) Volatility3 + YARA 스캔 (`--plugin-dirs`, windows.yarascan)
+
+Volatility2에서 흔히 보던 `windows.yarascan` 워크플로우를 Volatility3에서 쓰려면, **python YARA 바인딩(yara-python)** 이 필요합니다.
+이 프로젝트는 Docker 이미지에 `yara-python`을 포함했고, `vol_plugins/windows/yarascan.py`로 **Volatility3의 `windows.vadyarascan`을 `windows.yarascan` 이름으로 alias** 해두었습니다.
+
+> 주의: 이 방식은 **Volatility3가 스택(커널 레이어/심볼) 구성이 가능한 “진짜 메모리 이미지(raw/vmem 등)”** 에서만 동작합니다.  
+> Hybrid-Analysis `ha_dumps_unz`의 region-split `*.mdmp`에는 적용하기 어렵고, 그 경우는 위의 `/data/mdmp_extracted` 방식이 권장입니다.
+
+```bash
+# (예시) Volatility3 built-in: windows.vadyarascan
+bash scripts/apt_docker.sh vol -f /data/memory.raw \
+  windows.vadyarascan --yara-file /data/rules/malpedia/win.amadey.yar --pid 1234
+
+# (예시) 외부 플러그인(alias) 로드: windows.yarascan (== windows.vadyarascan)
+bash scripts/apt_docker.sh vol --plugin-dirs /work/vol_plugins -f /data/memory.raw \
+  windows.yarascan --yara-file /data/rules/malpedia/win.amadey.yar --pid 1234
+
+# 래퍼 스크립트 사용
+bash scripts/apt_docker.sh bash scripts/vol_yarascan.sh \
+  --mem /data/memory.raw \
+  --rules /data/rules/malpedia/win.amadey.yar \
+  --pid 1234
+```
+
 ## 문제 해결(Troubleshooting)
 
 - **다운로드가 끊김/차단되는 느낌**: `.env`에서 `MB_SLEEP_*`를 늘리고 `MB_RETRY_*`를 키우세요.

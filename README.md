@@ -294,38 +294,40 @@ docker compose -f signator_stack/docker-compose.yml up --build
 
 ## mdmp는 “전체 스캔” 대신 이렇게 쪼개서 스캔하기 (권장)
 
-Windows 메모리 덤프(mdmp)는 매우 크고 노이즈가 많아서, 보통 아래 **고신호(high-signal)** 영역만 추출한 뒤 YARA로 스캔합니다.
+Hybrid-Analysis에서 내려받은 “memory dumps”는 보통 `/data/ha_dumps_unz/<dump_folder>/*.mdmp` 형태로 풀리는데,
+여기서 `*.mdmp`는 **Windows Minidump 포맷(‘MDMP’)** 이 아니라 **이미 ‘메모리 region 단위로 쪼개진 raw bytes’** 인 경우가 많습니다.
+이 경우 Volatility로 “모듈/VAD”를 다시 추출하는 것이 아니라, 아래처럼 **고신호(high-signal) region만 선택해서 YARA로 스캔**하는 게 빠르고 안정적입니다.
 
-- **로드된 PE 모듈**: `vol windows.dlllist --dump`
-- **RWX / Private executable region(주입 의심 VAD)**: `vol windows.malfind --dump`
+- **로드된 PE 모듈(프록시)**: region이 `MZ`로 시작하고 `PE\0\0` 시그니처가 유효한 경우 (PE header region)
+- **Executable/RWX region**: 파일명 끝의 `.<8hex>.mdmp` 값이 Windows `PAGE_EXECUTE*` 보호(예: `0x20`, `0x40`)로 해석되는 경우
 
-이 프로젝트는 위 2가지를 `/data`로 추출하는 래퍼를 제공합니다: `scripts/extract_mdmp.sh`
+이 프로젝트는 위 선택을 `/data`로 뽑는 래퍼를 제공합니다: `scripts/extract_mdmp.sh`
 
-### 1) mdmp에서 추출하기
+### 1) HA region-split mdmp에서 “선택 추출”하기
 
 ```bash
-# 폴더(재귀) 내 *.mdmp/*.dmp 를 모두 처리
+# /data/ha_dumps_unz 아래의 각 <dump_folder>/ 를 처리해서
+# /data/mdmp_extracted/<dump_folder>/{dlllist,malfind}/ 로 심볼릭링크를 생성
 bash scripts/apt_docker.sh bash scripts/extract_mdmp.sh \
   --mdmp /data/ha_dumps_unz
 
-# 특정 mdmp 1개만 처리
+# RWX(0x40)만 보고 싶으면
 bash scripts/apt_docker.sh bash scripts/extract_mdmp.sh \
-  --mdmp /data/ha_dumps_unz/<dump_folder>/something.mdmp
+  --mdmp /data/ha_dumps_unz \
+  --rwx-only
 ```
 
-결과는 `/data/mdmp_extracted/<basename>/` 아래로 생성됩니다:
-- `/data/mdmp_extracted/<basename>/dlllist/` (로드된 모듈 덤프)
-- `/data/mdmp_extracted/<basename>/malfind/` (RWX/Private executable 영역 덤프)
+결과:
+- `/data/mdmp_extracted/<dump_folder>/dlllist/` : PE header region (모듈 후보)
+- `/data/mdmp_extracted/<dump_folder>/malfind/` : executable/RWX region (주입/쉘코드 후보)
 
-### 2) 추출물에 대해 YARA 스캔하기
+### 2) 선택 추출물에 대해 `win.amadey.yar` 스캔하기
 
 ```bash
-# (예시) 추출물 전체를 rules로 스캔
 bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
-  --rules /work/win.amadey_auto_mdmp.yar \
+  --rules /data/rules/malpedia/win.amadey.yar \
   --target /data/mdmp_extracted \
-  --mode bulk \
-  --out /data/yara_eval_mdmp_extracted.csv
+  --out /data/yara_eval_mdmp_extracted_win.amadey.csv
 ```
 
 ## 문제 해결(Troubleshooting)

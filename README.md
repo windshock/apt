@@ -11,6 +11,7 @@
 
 ## 구성 파일/스크립트
 
+- `malwarebazaar_hunt.py`: MalwareBazaar에서 태그 기준으로 해시 목록(예: Amadey 100개) 생성
 - `malwarebazaar_query.py`: MalwareBazaar에서 해시 메타데이터 조회(CSV 출력)
 - `malwarebazaar_download.py`: MalwareBazaar에서 샘플 다운로드 및 7z로 압축해제
 - `fetch_memory_dump.sh`: Hybrid-Analysis에서 샘플의 메모리 덤프 ZIP 다운로드
@@ -70,6 +71,16 @@ bash scripts/apt_docker.sh yara --version
 ### 1) 해시 목록 준비
 
 이미 해시 목록이 있다면(예: `/data/amadey_100_hashes.txt`) 그대로 사용하면 됩니다.
+
+없다면, MalwareBazaar에서 **Amadey 태그 기준으로 100개 해시를 생성**할 수 있습니다:
+
+```bash
+bash scripts/apt_docker.sh python3 malwarebazaar_hunt.py --tag amadey --limit 100
+```
+
+기본 출력:
+- 해시 목록: `/data/amadey_100_hashes.txt`
+- 메타 CSV: `/data/amadey_100_meta.csv`
 
 호스트 파일을 Docker로 읽고 싶으면, `/work`는 read-only 마운트이므로 **입력 파일을 `/data`로 복사**해두는 방식이 가장 단순합니다:
 

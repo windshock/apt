@@ -24,6 +24,7 @@ Options:
   --pid <pid[,pid...]>  Restrict to specific PID(s) for dlllist/malfind (optional)
   --offline             Do not download symbols (requires pre-populated symbols dir)
   --rwx-only            Only select PAGE_EXECUTE_READWRITE (0x40) regions (HA format only)
+  --copy                Copy selected region files into /data (instead of symlinks). Uses more disk.
 
 Notes:
   - Volatility symbol/cache are persisted in /data/volatility3 to avoid re-downloading.
@@ -39,6 +40,7 @@ MODE="both"
 PID_CSV=""
 OFFLINE=0
 RWX_ONLY=0
+COPY_MODE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --pid) PID_CSV="${2:-}"; shift 2 ;;
     --offline) OFFLINE=1; shift ;;
     --rwx-only) RWX_ONLY=1; shift ;;
+    --copy) COPY_MODE=1; shift ;;
     *)
       echo "Unknown arg: $1" >&2
       usage >&2
@@ -110,6 +113,9 @@ select_ha_regions() {
   local ha_args=(--src "$dump_dir" --out "$out_dir")
   if [[ "${RWX_ONLY}" -eq 1 ]]; then
     ha_args+=(--rwx-only)
+  fi
+  if [[ "${COPY_MODE}" -eq 1 ]]; then
+    ha_args+=(--copy)
   fi
 
   echo "[*] HA regions: ${dump_dir}"

@@ -16,6 +16,8 @@
 - `malwarebazaar_download.py`: MalwareBazaar에서 샘플 다운로드 및 7z로 압축해제
 - `fetch_memory_dump.sh`: Hybrid-Analysis에서 샘플의 메모리 덤프 ZIP 다운로드
 - `scripts/yara_eval.py`: 로컬 디렉터리(YARA 대상)에 대해 YARA 스캔 + CSV 리포트
+- `scripts/yara_rule_stats.py`: YARA 출력(룰명/파일경로)을 룰별 통계 CSV로 집계
+- `scripts/yara_folder_coverage.py`: YARA 출력(룰명/파일경로)을 폴더 단위(폴더 내 1개라도 매치면 탐지)로 집계
 - `scripts/apt_docker.sh`: 모든 명령을 Docker 컨테이너 안에서 실행하는 래퍼
 - `scripts/apt_shell.sh`: 컨테이너 쉘 진입
 
@@ -192,6 +194,52 @@ bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
   --rules /work/win.amadey_auto.yar \
   --target /data/ha_dumps_unz \
   --out /data/yara_eval_memory_unz.csv
+```
+
+## Yaraify(YaraHub) 룰셋으로 스캔/통계(권장)
+
+Yaraify YaraHub 룰셋 ZIP: `https://yaraify.abuse.ch/yarahub/yaraify-rules.zip`
+
+Docker에서 다운로드 + 컴파일(`yarac`) 후 스캔:
+
+```bash
+bash scripts/apt_docker.sh bash -lc '
+set -e
+mkdir -p /data/yaraify/rules /data/yaraify/out
+cd /data/yaraify
+curl -fsSL -L -o yaraify-rules.zip "https://yaraify.abuse.ch/yarahub/yaraify-rules.zip"
+unzip -q -o yaraify-rules.zip -d rules
+
+# NOTE: 일부 룰 파일은 문법/식별자 문제로 컴파일이 실패할 수 있습니다.
+# yarac 에러에 찍히는 파일을 제거하고 다시 시도하세요.
+yarac $(find rules -type f -name "*.yar" -o -name "*.yara" | tr "\n" " ") /data/yaraify/yarahub.compiled
+
+yara -C -r -p 4 -a 30 /data/yaraify/yarahub.compiled /data/unzip_amd_100 > /data/yaraify/out/scan_unzip_amd_100.txt || true
+'
+```
+
+룰별 “몇 개 파일에서 매치됐는지” 통계:
+
+```bash
+bash scripts/apt_docker.sh python3 scripts/yara_rule_stats.py \
+  --in /data/yaraify/out/scan_unzip_amd_100.txt \
+  --out /data/yaraify/out/stats_rules_unzip_amd_100.csv
+```
+
+HA 메모리 덤프(`mdmp`)는 폴더별로 1개라도 매치되면 “탐지”로 보려면:
+
+```bash
+# 스캔
+bash scripts/apt_docker.sh bash -lc '
+yara -C -r -p 4 -a 30 /data/yaraify/yarahub.compiled /data/ha_dumps_unz > /data/yaraify/out/scan_ha_dumps_unz_mdmp.txt || true
+'
+
+# 폴더 커버리지 집계
+bash scripts/apt_docker.sh python3 scripts/yara_folder_coverage.py \
+  --in /data/yaraify/out/scan_ha_dumps_unz_mdmp.txt \
+  --root /data/ha_dumps_unz \
+  --out /data/yaraify/out/stats_ha_dumps_unz_folder_coverage.csv \
+  --print-undetected
 ```
 
 ## 문제 해결(Troubleshooting)

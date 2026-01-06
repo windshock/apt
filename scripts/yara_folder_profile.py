@@ -82,6 +82,12 @@ def main():
     ap.add_argument("--in", dest="inp", required=True, help="Input yara output: '<rule> <path>' per line")
     ap.add_argument("--root", required=True, help="Root directory whose immediate children are treated as folders")
     ap.add_argument("--out", required=True, help="Output CSV path")
+    ap.add_argument(
+        "--group",
+        choices=["folder", "sha256"],
+        default="folder",
+        help="How to group results: per dump folder (default) or by sha256 prefix before first '_'",
+    )
     ap.add_argument("--buckets", default="", help="Optional JSON file defining rule buckets (high/mid/low/...).")
     ap.add_argument(
         "--write-buckets-template",
@@ -102,9 +108,10 @@ def main():
 
     folders = sorted([p.name for p in root.iterdir() if p.is_dir()])
     folder_set = set(folders)
+    sha_set = {f.split("_", 1)[0] for f in folders}
 
-    folder_rules: dict[str, set[str]] = defaultdict(set)
-    folder_buckets: dict[str, set[str]] = defaultdict(set)
+    group_rules: dict[str, set[str]] = defaultdict(set)
+    group_buckets: dict[str, set[str]] = defaultdict(set)
     seen_rules: set[str] = set()
 
     for raw in inp.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -126,7 +133,13 @@ def main():
         folder = p.parts[idx + 1]
         if folder not in folder_set:
             continue
-        folder_rules[folder].add(rule)
+        if args.group == "sha256":
+            group = folder.split("_", 1)[0]
+            if group not in sha_set:
+                continue
+        else:
+            group = folder
+        group_rules[group].add(rule)
 
     if args.write_buckets_template:
         write_template(args.write_buckets_template, seen_rules)
@@ -135,26 +148,31 @@ def main():
 
     buckets = load_buckets(args.buckets) if args.buckets else DEFAULT_BUCKETS
 
-    for folder, rules in folder_rules.items():
+    for group, rules in group_rules.items():
         for rule in rules:
-            folder_buckets[folder].add(bucket_for_rule(rule, buckets))
+            group_buckets[group].add(bucket_for_rule(rule, buckets))
 
     def has_all3(bset: set[str]) -> bool:
         return "high" in bset and "mid" in bset and "low" in bset
 
-    all3 = [f for f in folders if has_all3(folder_buckets.get(f, set()))]
+    if args.group == "sha256":
+        groups = sorted(sha_set)
+    else:
+        groups = folders
+
+    all3 = [g for g in groups if has_all3(group_buckets.get(g, set()))]
 
     if args.print_all3:
-        print("FOLDERS_WITH_HIGH_MID_LOW")
-        for f in all3:
-            print(f)
+        print("GROUPS_WITH_HIGH_MID_LOW")
+        for g in all3:
+            print(g)
         print(f"count {len(all3)}")
 
     with out.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(
             f,
             fieldnames=[
-                "folder",
+                "group",
                 "has_high",
                 "has_mid",
                 "has_low",
@@ -164,18 +182,18 @@ def main():
             ],
         )
         w.writeheader()
-        for folder in folders:
-            rules = sorted(folder_rules.get(folder, set()))
-            buckets = sorted(folder_buckets.get(folder, set()))
+        for group in groups:
+            rules = sorted(group_rules.get(group, set()))
+            bset = sorted(group_buckets.get(group, set()))
             w.writerow(
                 {
-                    "folder": folder,
-                    "has_high": int("high" in buckets),
-                    "has_mid": int("mid" in buckets),
-                    "has_low": int("low" in buckets),
-                    "has_all3": int(has_all3(set(buckets))),
+                    "group": group,
+                    "has_high": int("high" in bset),
+                    "has_mid": int("mid" in bset),
+                    "has_low": int("low" in bset),
+                    "has_all3": int(has_all3(set(bset))),
                     "rules": ",".join(rules),
-                    "buckets": ",".join(buckets),
+                    "buckets": ",".join(bset),
                 }
             )
 

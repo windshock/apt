@@ -102,12 +102,23 @@ bash scripts/apt_docker.sh python3 malwarebazaar_download.py \
 - 다운로드 ZIP: `/data/download/`
 - 압축해제 결과: `/data/unzip/`
 
+`--file/--limit`로 “이번에 처리할 샘플”이 정해져 있다면, **런별로 디렉터리를 분리**해두면(누적 방지) 스캔도 해당 폴더만 하면 됩니다:
+
+```bash
+MB_DOWNLOAD_DIR=/data/download_amd_100 \
+MB_UNZIP_DIR=/data/unzip_amd_100 \
+bash scripts/apt_docker.sh python3 malwarebazaar_download.py \
+  --file /data/amadey_100_hashes.txt \
+  --limit 100 \
+  --verbose
+```
+
 ### 3) YARA 스캔(다운로드 샘플 대상)
 
 ```bash
 bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
   --rules /work/win.amadey_auto.yar \
-  --target /data/unzip \
+  --target /data/unzip_amd_100 \
   --out /data/yara_eval_downloaded.csv
 ```
 

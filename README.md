@@ -102,6 +102,18 @@ bash scripts/apt_docker.sh python3 malwarebazaar_download.py \
 - 다운로드 ZIP: `/data/download/`
 - 압축해제 결과: `/data/unzip/`
 
+일부 샘플은 내부가 다시 `.zip/.7z/.rar`로 **중첩 압축**되어 있을 수 있습니다. 이 경우 YARA 커버리지를 올리려면 중첩 압축까지 자동으로 풀어주세요:
+
+```bash
+bash scripts/apt_docker.sh python3 malwarebazaar_download.py \
+  --file /data/amadey_100_hashes.txt \
+  --limit 100 \
+  --recursive-extract \
+  --verbose
+```
+
+중첩 압축 해제 결과는 `UNZIP_DIR/_nested/` 아래에 생성됩니다(예: `/data/unzip_amd_100/_nested/...`).
+
 `--file/--limit`로 “이번에 처리할 샘플”이 정해져 있다면, **런별로 디렉터리를 분리**해두면(누적 방지) 스캔도 해당 폴더만 하면 됩니다:
 
 ```bash

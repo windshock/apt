@@ -111,6 +111,19 @@ bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
   --out /data/yara_eval_downloaded.csv
 ```
 
+특정 파일만(다운로드/추출 결과 중 일부만) 스캔하고 싶으면, 스캔 대상 파일 경로 목록을 만들어 `--scan-list`로 전달하면 됩니다:
+
+```bash
+# 예: /data/unzip 아래 파일들 중 원하는 것만 골라 목록 생성
+find /data/unzip -type f | head -100 > /data/scan_list.txt
+
+bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
+  --rules /work/win.amadey_auto.yar \
+  --target /data/unzip \
+  --scan-list /data/scan_list.txt \
+  --out /data/yara_eval_downloaded_subset.csv
+```
+
 ### 4) (선택) Hybrid-Analysis 메모리 덤프 다운로드
 
 `HA_COOKIE`가 필요합니다.

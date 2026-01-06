@@ -15,6 +15,22 @@ def iter_files(target: Path):
             yield p
 
 
+def iter_from_list(list_file: Path, base_dir: Path | None):
+    """
+    Read a file containing one path per line.
+    - Ignores blank lines and comments starting with '#'
+    - If a line is a relative path and base_dir is provided, it will be resolved relative to base_dir.
+    """
+    for raw in list_file.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        p = Path(line)
+        if not p.is_absolute() and base_dir is not None:
+            p = base_dir / p
+        yield p
+
+
 def _parse_yara_matches(stdout: str) -> list[str]:
     """
     Default yara output is typically: "<rule_name> <file_path>"
@@ -76,7 +92,13 @@ def run_yara(
 def main():
     ap = argparse.ArgumentParser(description="Simple YARA evaluation over a file/dir -> CSV")
     ap.add_argument("--rules", required=True, help="YARA rules file path")
-    ap.add_argument("--target", required=True, help="File or directory to scan")
+    ap.add_argument("--target", default="", help="File or directory to scan (ignored when --scan-list is used).")
+    ap.add_argument("--scan-list", default="", help="Scan only files listed in this file (one path per line).")
+    ap.add_argument(
+        "--base-dir",
+        default="",
+        help="When using --scan-list, resolve relative paths against this base directory (defaults to --target if provided).",
+    )
     ap.add_argument("--out", required=True, help="Output CSV path")
     ap.add_argument("--timeout", type=float, default=30.0, help="Per-file YARA timeout seconds (0 = no timeout).")
     ap.add_argument("--fast", action="store_true", help="Enable YARA fast scan mode (-f).")
@@ -86,7 +108,7 @@ def main():
     args = ap.parse_args()
 
     rules = args.rules
-    target = Path(args.target)
+    target = Path(args.target) if args.target else None
     out = Path(args.out)
     timeout_s = None if args.timeout <= 0 else float(args.timeout)
 
@@ -104,15 +126,35 @@ def main():
 
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    scan_list = Path(args.scan_list) if args.scan_list else None
+    base_dir = None
+    if scan_list is not None:
+        if not scan_list.exists():
+            raise SystemExit(f"--scan-list not found: {scan_list}")
+        if args.base_dir:
+            base_dir = Path(args.base_dir)
+        elif target is not None:
+            base_dir = target
+    else:
+        if target is None:
+            raise SystemExit("Either --target or --scan-list must be provided.")
+
     scanned = 0
     matched = 0
     started = time.time()
     with out.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["path", "matched", "matches", "error"])
         w.writeheader()
-        for fp in iter_files(target):
+        file_iter = iter_from_list(scan_list, base_dir) if scan_list is not None else iter_files(target)  # type: ignore[arg-type]
+        for fp in file_iter:
             scanned += 1
-            is_match, matches, err = run_yara(rules, str(fp), timeout_s=timeout_s, fast_scan=args.fast)
+            if not fp.exists() or not fp.is_file():
+                err = "not_found"
+                is_match, matches = False, []
+                if args.verbose:
+                    log.warning("NOT_FOUND %s", fp)
+            else:
+                is_match, matches, err = run_yara(rules, str(fp), timeout_s=timeout_s, fast_scan=args.fast)
             if is_match:
                 matched += 1
                 if args.verbose:

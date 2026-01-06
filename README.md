@@ -392,4 +392,26 @@ bash scripts/apt_docker.sh bash scripts/thor_lite.sh -- --folder /data/mdmp_extr
 bash scripts/apt_docker.sh bash scripts/thor_lite.sh -- --folder /data/unzip_amd_100
 ```
 
+## (옵션) LOKI(Neo23x0)로 스캔하기
+
+LOKI는 Python 기반 IOC/YARA 스캐너이며, 시그니처는 `signature-base`를 사용합니다.  
+참고: `loki.py`는 단독 파일이 아니라 `lib/`, `config/` 등 **전체 레포 구조가 필요**합니다. (upstream: `https://github.com/Neo23x0/Loki`)
+
+이 프로젝트는 바이너리를 커밋하지 않고, Docker 볼륨(`/data`)에 **runtime clone**해서 실행하는 래퍼를 제공합니다: `scripts/loki.sh`
+
+```bash
+# 도움말
+bash scripts/apt_docker.sh bash scripts/loki.sh -- --help
+
+# HA mdmp 추출물(고신호 영역) 스캔
+bash scripts/apt_docker.sh bash scripts/loki.sh --scan /data/mdmp_extracted
+
+# 다운로드 샘플 코퍼스 스캔
+bash scripts/apt_docker.sh bash scripts/loki.sh --scan /data/unzip_amd_100
+```
+
+기본적으로 `signature-base`는 아래 우선순위로 사용됩니다:
+- `/data/rules/thirdparty/signature-base` (이미 받아둔 경우)
+- 아니면 Loki 레포 내부의 `signature-base/`
+
 

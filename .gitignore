@@ -20,5 +20,7 @@ archive/
 # third-party tools (do not commit binaries/signature packs)
 thor-lite/
 tools/thor-lite/
+tools/loki/
+loki/
 
 

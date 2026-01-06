@@ -3,5 +3,9 @@ smda==2.4.5
 tqdm==4.66.5
 volatility3==2.26.2
 yara-python==4.5.4
+psutil==6.0.0
+colorama==0.4.6
+rfc5424-logging-handler==1.4.3
+netaddr==1.3.0
 
 

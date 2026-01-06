@@ -64,7 +64,9 @@ def run_yara(
     # Keep a slightly larger subprocess timeout as a safety net.
     subprocess_timeout = None
     if timeout_s is not None:
-        cmd += ["-a", str(timeout_s)]
+        # YARA expects an integer for -a (timeout seconds)
+        yara_timeout = max(1, int(float(timeout_s)))
+        cmd += ["-a", str(yara_timeout)]
         subprocess_timeout = max(1.0, float(timeout_s) + 5.0)
     cmd += [rules, file_path]
     try:
@@ -80,10 +82,18 @@ def run_yara(
     except Exception as e:
         return False, [], f"exec_error:{e}"
 
+    # YARA exit codes are not consistent across distributions/builds.
+    # In this repo's Docker image, we've observed:
+    #   - rc=0 for both match and no-match
+    #   - rc=1 for syntax/compile errors (with stderr containing "error:")
+    # So we treat stderr content as the source of truth for errors.
+    stderr = (p.stderr or "").strip()
     if p.returncode not in (0, 1):
-        # 0: matched, 1: no matches, others: error
-        err = (p.stderr or "").strip() or f"yara_rc={p.returncode}"
-        return False, [], err
+        return False, [], stderr or f"yara_rc={p.returncode}"
+    if p.returncode == 1 and stderr:
+        return False, [], stderr
+    if p.returncode == 0 and stderr.lower().startswith("error:"):
+        return False, [], stderr
 
     matches = _parse_yara_matches(p.stdout or "")
     return bool(matches), matches, None

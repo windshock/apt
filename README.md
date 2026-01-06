@@ -308,6 +308,27 @@ python3 /work/scripts/yara_folder_profile.py \
 '
 ```
 
+#### (권장) `yaraify_rules_classification.md`를 단일 소스로 써서 buckets 자동 생성
+
+레포의 `yaraify_rules_classification.md`는 YaraHub 룰을 High/Mid/Low로 분류한 “사람이 읽는 기준”입니다.  
+이를 그대로 `buckets.json`으로 변환하려면 아래 스크립트를 사용하세요:
+
+```bash
+# md -> buckets json
+bash scripts/apt_docker.sh python3 scripts/yaraify_buckets_from_md.py \
+  --in /work/yaraify_rules_classification.md \
+  --out /data/yaraify/yarahub_buckets.json
+
+# sha256 기준으로 high+mid+low 조합 계산
+bash scripts/apt_docker.sh python3 scripts/yara_folder_profile.py \
+  --in /data/yaraify/out/scan_ha_dumps_unz_mdmp.txt \
+  --root /data/mdmp_extracted \
+  --group sha256 \
+  --buckets /data/yaraify/yarahub_buckets.json \
+  --out /data/yaraify/out/yarahub_sha256_profile.csv \
+  --print-all3
+```
+
 ## YARA-Signator로 HA mdmp 기반 룰 생성(고급)
 
 YARA-Signator는 **PostgreSQL + capstone_server + SMDA 리포트**를 요구하는 무거운 파이프라인입니다. (요약/전제는 upstream 문서 참고)

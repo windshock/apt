@@ -1,5 +1,6 @@
 import argparse
 import csv
+import json
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,6 +32,42 @@ DEFAULT_BUCKETS = {
 }
 
 
+def load_buckets(path: str) -> dict[str, set[str]]:
+    """
+    Load buckets from a JSON file:
+
+    {
+      "high": ["rule1", "rule2"],
+      "mid": ["rule3"],
+      "low": ["rule4"]
+    }
+    """
+    p = Path(path)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise SystemExit(f"Invalid buckets JSON (expected object): {p}")
+    buckets: dict[str, set[str]] = {}
+    for k, v in data.items():
+        if not isinstance(k, str) or not isinstance(v, list):
+            raise SystemExit(f"Invalid buckets JSON entry: {k} -> {type(v)}")
+        buckets[k] = {str(x) for x in v}
+    return buckets
+
+
+def write_template(path: str, rules: set[str]):
+    """
+    Write a starter buckets JSON with all seen rules in 'other' (user moves them to high/mid/low).
+    """
+    p = Path(path)
+    tpl = {
+        "high": sorted(DEFAULT_BUCKETS["high"] & rules),
+        "mid": sorted(DEFAULT_BUCKETS["mid"] & rules),
+        "low": sorted(DEFAULT_BUCKETS["low"] & rules),
+        "other": sorted(rules - (DEFAULT_BUCKETS["high"] | DEFAULT_BUCKETS["mid"] | DEFAULT_BUCKETS["low"])),
+    }
+    p.write_text(json.dumps(tpl, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def bucket_for_rule(rule: str, buckets: dict[str, set[str]]) -> str:
     for name, rules in buckets.items():
         if rule in rules:
@@ -45,6 +82,12 @@ def main():
     ap.add_argument("--in", dest="inp", required=True, help="Input yara output: '<rule> <path>' per line")
     ap.add_argument("--root", required=True, help="Root directory whose immediate children are treated as folders")
     ap.add_argument("--out", required=True, help="Output CSV path")
+    ap.add_argument("--buckets", default="", help="Optional JSON file defining rule buckets (high/mid/low/...).")
+    ap.add_argument(
+        "--write-buckets-template",
+        default="",
+        help="Write a starter buckets JSON containing all rules observed in --in and exit.",
+    )
     ap.add_argument(
         "--print-all3",
         action="store_true",
@@ -62,6 +105,7 @@ def main():
 
     folder_rules: dict[str, set[str]] = defaultdict(set)
     folder_buckets: dict[str, set[str]] = defaultdict(set)
+    seen_rules: set[str] = set()
 
     for raw in inp.read_text(encoding="utf-8", errors="replace").splitlines():
         line = raw.strip()
@@ -71,6 +115,7 @@ def main():
         if len(parts) != 2:
             continue
         rule, path = parts
+        seen_rules.add(rule)
         p = Path(path)
         try:
             idx = p.parts.index(root.name)
@@ -82,7 +127,17 @@ def main():
         if folder not in folder_set:
             continue
         folder_rules[folder].add(rule)
-        folder_buckets[folder].add(bucket_for_rule(rule, DEFAULT_BUCKETS))
+
+    if args.write_buckets_template:
+        write_template(args.write_buckets_template, seen_rules)
+        print(f"Wrote buckets template: {args.write_buckets_template}")
+        return
+
+    buckets = load_buckets(args.buckets) if args.buckets else DEFAULT_BUCKETS
+
+    for folder, rules in folder_rules.items():
+        for rule in rules:
+            folder_buckets[folder].add(bucket_for_rule(rule, buckets))
 
     def has_all3(bset: set[str]) -> bool:
         return "high" in bset and "mid" in bset and "low" in bset

@@ -1,0 +1,19 @@
+services:
+  apt:
+    build: .
+    working_dir: /work
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    tmpfs:
+      - /tmp
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+
+volumes:
+  apt_data:
+
+

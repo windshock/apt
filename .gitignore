@@ -1,0 +1,20 @@
+.env
+.env.*
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# artifacts
+download/
+unzip/
+ha_dumps/
+ha_dumps_unz/
+*.zip.html
+
+# local archive (corpus, large artifacts, venv, etc.)
+archive/
+archive/
+
+

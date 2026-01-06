@@ -1,0 +1,10 @@
+venv/
+download/
+unzip/
+ha_dumps/
+ha_dumps_unz/
+__pycache__/
+*.pyc
+*.pyo
+
+

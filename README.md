@@ -414,4 +414,26 @@ bash scripts/apt_docker.sh bash scripts/loki.sh --scan /data/unzip_amd_100
 - `/data/rules/thirdparty/signature-base` (이미 받아둔 경우)
 - 아니면 Loki 레포 내부의 `signature-base/`
 
+## (옵션) HA region 파일을 region_000001.bin 형태로 export 후 YARA 스캔
+
+Hybrid-Analysis `ha_dumps_unz/<dump_folder>/*.mdmp`는 (Minidump가 아니라) **region bytes 조각**인 경우가 많습니다.  
+원하면 아래처럼 **일련번호 `region_*.bin`으로 export**해서 `yara -r`로 스캔할 수 있습니다.
+
+```bash
+# (예시) exec 또는 embedded-PE 후보만 export (권장)
+bash scripts/apt_docker.sh python3 scripts/export_ha_regions.py \
+  --src /data/ha_dumps_unz/<dump_folder> \
+  --out /data/ha_regions_export/<dump_folder> \
+  --filter exec_or_pe
+
+# 스캔
+bash scripts/apt_docker.sh bash -lc '
+yara -r -p 4 -a 30 /data/yaraify/yarahub.compiled /data/ha_regions_export/<dump_folder> > /data/ha_regions_export/<dump_folder>/scan.txt || true
+'
+```
+
+export 결과:
+- `region_000001.bin` … (복사본)
+- `manifest.csv` (원본 파일명/size/protect/is_exec/is_pe/mz_offset/pe_offset 매핑)
+
 

@@ -292,6 +292,42 @@ docker compose -f signator_stack/docker-compose.yml up --build
 
 완료되면 `/data/yara-output/` 아래에 생성된 룰/리포트를 확인하세요.
 
+## mdmp는 “전체 스캔” 대신 이렇게 쪼개서 스캔하기 (권장)
+
+Windows 메모리 덤프(mdmp)는 매우 크고 노이즈가 많아서, 보통 아래 **고신호(high-signal)** 영역만 추출한 뒤 YARA로 스캔합니다.
+
+- **로드된 PE 모듈**: `vol windows.dlllist --dump`
+- **RWX / Private executable region(주입 의심 VAD)**: `vol windows.malfind --dump`
+
+이 프로젝트는 위 2가지를 `/data`로 추출하는 래퍼를 제공합니다: `scripts/extract_mdmp.sh`
+
+### 1) mdmp에서 추출하기
+
+```bash
+# 폴더(재귀) 내 *.mdmp/*.dmp 를 모두 처리
+bash scripts/apt_docker.sh bash scripts/extract_mdmp.sh \
+  --mdmp /data/ha_dumps_unz
+
+# 특정 mdmp 1개만 처리
+bash scripts/apt_docker.sh bash scripts/extract_mdmp.sh \
+  --mdmp /data/ha_dumps_unz/<dump_folder>/something.mdmp
+```
+
+결과는 `/data/mdmp_extracted/<basename>/` 아래로 생성됩니다:
+- `/data/mdmp_extracted/<basename>/dlllist/` (로드된 모듈 덤프)
+- `/data/mdmp_extracted/<basename>/malfind/` (RWX/Private executable 영역 덤프)
+
+### 2) 추출물에 대해 YARA 스캔하기
+
+```bash
+# (예시) 추출물 전체를 rules로 스캔
+bash scripts/apt_docker.sh python3 scripts/yara_eval.py \
+  --rules /work/win.amadey_auto_mdmp.yar \
+  --target /data/mdmp_extracted \
+  --mode bulk \
+  --out /data/yara_eval_mdmp_extracted.csv
+```
+
 ## 문제 해결(Troubleshooting)
 
 - **다운로드가 끊김/차단되는 느낌**: `.env`에서 `MB_SLEEP_*`를 늘리고 `MB_RETRY_*`를 키우세요.

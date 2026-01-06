@@ -1,5 +1,6 @@
 requests==2.32.3
 smda==2.4.5
 tqdm==4.66.5
+volatility3==2.26.2
 
 

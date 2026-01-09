@@ -1,0 +1,450 @@
+# YARAify YARAhub rules classification (High/Mid/Low)
+
+Classification is based on meta.description and meta tags (family/tags).
+High: loader/packer/obfuscation/memory behavior signals.
+Mid: attack-chain/framework/campaign/tooling categories.
+Low: family/identity indicators; any specific family tag forces Low.
+
+## High
+- AHK_DarkGate_Payload_April_2024 :: Detects .ahk payload dropped by DarkGate loader
+- AMSIbypass_CLR_DLL :: AMSI bypass CLR. https://practicalsecurityanalytics.com/new-amsi-bypss-technique-modifying-clr-dll-in-memory/
+- APT_Bitter_Maldoc_Verify :: Detects Bitter (T-APT-17) shellcode in oleObject (CVE-2018-0798)
+- BAT_DbatLoader :: Detects base64 and hex encoded MZ header used by DbatLoader
+- BrowserExtensionLoader :: Detects Chrome/Edge browser extension loader
+- CAP_WerFaultSecure_Freeze_Technique :: Detects binaries implementing the WER freeze technique via WerFaultSecure + MiniDumpWriteDump + privilege escalation + handle manipulation
+- DLL_DiceLoader_Fin7_Feb2024 :: Detects Dice Loader malware used by Fin7 APT based on the export properties
+- DLL_Loader_BlackWood_APT_Jan2024 :: Detects the Dll Loader for the NSPX30 implant used by the Black Wood APT
+- DLL_Loader_Pikabot_March2024 :: Detects Pikabot Loader malware based on PE import & export properties
+- DLL_Loader_Wineloader_March2024 :: Detects Wineloader malware used by the SpikedWine Threat Actor in campaigns against European Diplomats
+- DLL_PyPi_Loader_Lazarus_March2024 :: Detects the Loader component of the Malicious PyPi Packages distributed by Lazarus Group based on PDB Paths
+- DLL_RWX_S_Signed_Search :: Detects RWX-S signed DLLs. This verifies that the image contains a signature, not that it is valid.
+- DLL_gh0st_Dropper_second_stage_March2024 :: Detects gh0st RAT which is the second stage paylaod dropped by gh0st Loader
+- DarkTortilla_1stStage :: Matches DarkTortilla first stage loader strings/bytecode
+- DarkTortilla_2ndStage :: Matches DarkTortilla second stage loader strings/bytecode
+- DetectEncryptedVariants :: Detects 'encrypted' in ASCII, Unicode, base64, or hex-encoded
+- DetectGoMethodSignatures :: Detects Go method signatures in unpacked Go binaries
+- Detect_Malicious_Python_Decompress_Exec :: Detects malicious Python scripts with obfuscated zlib decompression and execution logic
+- ELF_Loader_KrustyLoader_Feb2024 :: Detects Krusty Loader written in Rust which was linked to Ivanti ConnectSecure compromises
+- EXE_Loader_WikiLoader_Feb2024 :: Detects Wiki Loader samples based on PE import & export properties
+- EXE_Loader_XDealer_March2024 :: Detects Loader used to deliver the XDealer Malware aka DinodasRAT which is used by Chinese APT Earth Krahang
+- EXE_gh0st_Dropper_first_stage_March2024 :: Detects gh0st malware Dropper which contains an embedded second stage payload based on PE properties
+- EXE_gh0st_RootKit_first_stage_March2024 :: Detects gh0st Root Kit malware Dropper which contains an embedded second stage payload based on PE properties
+- Erbium_Loader :: Detects Erbium Stealer's loader
+- Erbium_Stealer_Obfuscated :: Erbium Stealer in its obfuscated format
+- GTEL_Hunt_Malicious_LNK_Payload :: Phat hien file LNK thuc thi lenh CMD/Powershell (CV gia mao)
+- Gh0st_PythonLoader :: Matches an unknown Gh0st variant Python loader
+- Guloader_VBScript :: Detects GuLoader/CloudEye VBScripts
+- IDATDropper :: Detects files containing embedded JavaScript; the JS executes a PowerShell command which either downloads IDATLoader in an archive, or an executable (not IDATLoader) which is loaded into memory. The modified PE will only run if it's executed as an HTML Application (.hta).
+- ISO_LNK_JS_CMD_DLL :: Detects iso > lnk > js > cmd > dll execution chain
+- Icedid_Unpacked_in_Memory :: This rule detects samples from the IcedID family unpacked in memory, identifying code reuse of key functions.
+- Image_With_BaseMarkers :: Immages containing the markers 'BaseStart' and '-BaseEnd' Crypter-And-Tools
+- Indicator_MiniDumpWriteDump :: Detects PE files and PowerShell scripts that use MiniDumpWriteDump either through direct imports or string references
+- JohnWalkerTexasLoader :: Detects JohnWalkerTexasLoader
+- KoiLoader :: Detects KoiLoader
+- LNK_Dropper_Russian_APT_Feb2024 :: Detects LNK dropper samples used by a Russian APT during a past campaign
+- Linux_Downloader :: Detects a Linux downloader targeting x64, x86, and arm64 architectures.
+- LockbitBlack_Loader :: Hunting rule for the Lockbit Black loader, based on https://twitter.com/vxunderground/status/1543661557883740161
+- LummaInjector :: Detects LummaStealer injection into RegAsm.exe
+- MALWARE_Storm0978_HTML_PROTHANDLER_Jul23 :: Detects Office HTML injection through docfiles with Windows Protocol Handler execution
+- MAL_Cronos_Crypter_Assembly_Name :: Detects Cronos Crypter based on .NET assembly name.
+- MAL_Cronos_Crypter_Salt :: Detects Cronos Crypter based encryption salt value and string that should be seen in memory.
+- MAL_Cronos_Crypter_Strings :: Detects Cronos Crypter based on strings found in file.
+- MAL_JS_Gootloader_jQuery_Compactv2_17Dec24 :: Detects malicious Gootloader JS hidden in the Query Compat JavaScript Library v3.0.0-alpha1
+- MAL_Linux_IoT_MultiArch_BotnetLoader_Generic :: Technique-based detection of IoT/Linux botnet loader shell scripts downloading binaries from numeric IPs, chmodding, and executing multi-architecture payloads
+- MAL_NET_LimeCrypter_RunPE_Jan24 :: Detects LimeCrypter RunPE module. LimeCrypter is an open source .NET based crypter and loader commonly used by threat actors
+- MAL_NET_NixImports_Loader_Jan24 :: Detects open-source NixImports .NET malware loader. A stealthy loader using dynamic import resolving to evade static detection
+- MAL_packer_lb_was_detected :: Detect the packer used by Lockbit4.0
+- MaksStealer_Loader :: Detects MaksStealer dropper/loader JAR
+- MythStealerLoader :: attempts to match the strings/instructions found in MythStealer loader; this is a very loose rule and may match fp
+- Nymaim :: Nymaim Loader
+- PUPPETLOADER_loader
+- PowerShell_XOR_Function_Specific :: Detects a specific PowerShell function that performs XOR encoding and decoding.
+- Powerpoint_Code_Execution :: New code execution technique using Powerpoint has been seen in the wild. The technique is triggered by using hyperlinks instead of Run Program/Macro. This new method has bypassed all the vendors for 220 days since 2022-02-02.
+- PseudoManuscriptLoader
+- PureCryptCMD :: Detects PureCrypters .cmd output
+- QakBot_OneNote_Loader :: Detects a OneNote malicious loader mostly used by QBot (TA570/TA577)
+- Qakbot_WSF_loader :: Detects a WSF loader used to deploy Qakbot DLL
+- RABBITHUNT_loader
+- RANSOM_Lockbit_Black_Packer :: Detects the packer used by Lockbit Black (Version 3)
+- RobotDropper :: Detects RobotDropper
+- SUSP_NET_Shellcode_Loader_Indicators_Jan24 :: Detects indicators of shellcode loaders in .NET binaries
+- SUSP_OBF_NET_ConfuserEx_Packer_Jan24 :: Detects binaries packed with ConfuserEx compression packer. This feature compresses and encrypts the actual image into a stub that unpacks and loads the original image on runtime.
+- SUSP_OBF_NET_Eazfuscator_String_Encryption_Jan24 :: Detects .NET images obfuscated with Eazfuscator string encryption. Eazfuscator is a widely used commercial obfuscation solution used by both legitimate software and malware.
+- SUSP_OBF_NET_Eazfuscator_Virtualization_Jan24 :: Detects .NET images obfuscated with Eazfuscator virtualization protection. Eazfuscator is a widely used commercial obfuscation solution used by both legitimate software and malware.
+- SUSP_OBF_NET_Reactor_Indicators_Jan24 :: Detects indicators of .NET Reactors managed obfuscation. Reactor is a commercial obfuscation solution, pirated versions are often abused by threat actors.
+- SUSP_OBF_NET_Reactor_Native_Stub_Jan24 :: Detects native packer stub for version 4.5-4.7 of .NET Reactor. A pirated copy of version 4.5 of this commercial obfuscation solution is used by various malware families like BlackBit, RedLine, AgentTesla etc.
+- SVCReady_Packed :: packed SVCReady / win.svcready
+- SocGholish_Obfuscated :: Detects reverse obfuscated socgholish string
+- SocGholish_Variant_B :: Detects SocGholish obfuscated variant first observed in July 2022
+- Sus_CMD_Powershell_Usage :: May Contain(Obfuscated or no) Powershell or CMD Command that can be abused by threat actor(can create FP)
+- TH_Win_ETW_Bypass_2025_CYFARE :: Windows ETW Bypass Detection Rule - 2025
+- VxLang_Packer :: Detects executables packed with VxLang
+- Win_DarkGate :: DarkGate Strings Decryption Routine
+- apt_mustangpanda_poohloader :: Detect PoohLoader, a Loader used by Mustang Panda to deploy Toneshell. This Loader utilized Mavinject to inject the shellcode.
+- babbleloader_112024 :: This rule detects intrinsic patterns of BabbleLoader.
+- binaryObfuscation
+- crashedtech_loader
+- detect_RWS_pe_rule :: Detects RWX-S signed binaries. This only verifies that the image contains a signature, not that it is valid.
+- icedid_2stager :: This rule detects samples from the IcedID family unpacked in memory, identifying code reuse of key functions.
+- icedid_unpacked :: This rule detects samples from the IcedID family unpacked in memory, identifying code reuse of key functions.
+- icedid_x64dll_stager :: This rule detects samples from the IcedID family unpacked in memory, identifying code reuse of new config decryption function.
+- koi_loader
+- latrodectus_decrypt_string :: This rule detects the Latrodectus DLL Decrypt String Algorithm.
+- lb4_hashing_alg :: This rule detects the custom hashing algorithm of Lockbit4.0 unpacked
+- lb4_packer_was_detected :: Detect the packer used by Lockbit4.0
+- mal_italianpasta_pastaloader :: Detect PastaLoader, a loader used in ItalianPasta campaign targeting Travel Sector
+- meth_get_eip
+- meth_peb_parsing
+- meth_stackstrings
+- mofongo_loader :: Mofongo loader maps and executes a payload in a hollowed msedge process
+- pe_detect_tls_callbacks
+- pe_no_import_table :: Detect pe file that no import table
+- pe_packer_pecompact2
+- privateloader :: Detects PrivateLoader malware.
+- sqlcmd_loader
+- unpacked_qbot :: Detects unpacked or memory-dumped QBot samples
+- vidar_stealer_unpacked :: Detects the unpacked Vidar binary.
+- vulnerablity_driver2_PhysicalMemory :: vulnerablity_driver2_PhysicalMemory
+- win_amadey_a9f4 :: matches unpacked Amadey samples
+- win_bitcoin_genesis_b9_ce9f :: detects a downloader with a DGA based on the Bitcoin Genesis Block
+- win_colibriloader_unpacked :: ColibriLoader malware
+- win_erbium_stealer_a1_2622 :: detects the unpacked Erbium stealer
+- win_laplas_clipper_9c96 :: detects unpacked Laplas Clipper
+- win_lu0bot_loader_1d53 :: detects the loader of the Lu0bot malware
+- win_matanbuchus :: Detects Matanbuchus MaaS loader and core
+- win_modern_loader_v1_01_1edf :: matches unpacked ModernLoader samples
+- win_originbot :: Detects OriginBot(net) / OriginLoader malware.
+- win_phorpiex_a_84fc :: detects unpacked Phorpiex samples
+- win_vidar_a_a901 :: detect unpacked Vidar samples
+- win_xwormmm_s1_6f74 :: detects unpacked Xwormmm samples
+- yarahub_win_remcos_rat_unpacked_aug_2023
+
+## Mid
+- APT_Bitter_Almond_RAT :: Detects Bitter (T-APT-17) Almond RAT (.NET)
+- APT_Bitter_PDB_Paths :: Detects Bitter (T-APT-17) PDB Paths
+- APT_CN_Stately_Taurus_DLL_Backdoor_April2024 :: Detects malware used by Chinese APT Stately Taurus aka Mustang Panda targeting ASEAN entities
+- APT_CN__Package2_DLL_April2024 :: Detects malware (Package 2) used by a Chinese APT targeting ASEAN entities
+- APT_CN__Package2_EXE_April2024 :: Detects malware (Package 2) used by a Chinese APT targeting ASEAN entities
+- APT_Muddy_Water_MSI_RMM_Atera_April2024 :: Detects suspicious use of MSI Packages serving RMM Tool Atera used by APT Muddy Water in their Iron Swords Campaign
+- APT_Patchwork_Code_Signing_Cert_March2024 :: Detects malware used by Indian APT Patchwork based on the Code Signing Certificate
+- BrainCipher :: Detects BrainCipher Ransomware
+- BruteRatelConfig
+- BunnyLoader :: generic crypto/card stealer rule
+- CRU_Xerph_Stealer_v0 :: Detects window hiding and mutex creation routine of Xerph Stealer
+- CVE_2017_17215 :: Detects exploitation attempt of CVE-2017-17215
+- CVE_2025_8088_rar_ADS_traversal :: Detects CVE-2025-8088 WinRAR NTFS ADS path traversal exploitation
+- Chinese_APT_Backdoor :: Identify Chinese APT Backdoor
+- ClipperDLL_Amadey :: Detects Amadey's Clipper DLL
+- CrimsonRAT :: Matches CrimsonRAT
+- DLL_Mustang_Panda_March2024 :: Detects a malicious DLL used by Mustang Panda (aka TA416) in a New Year Themed Campaign
+- DLL_North_Korean_Lazarus_March2024 :: Detects a malicious DLL used by a North Korean Threat actor Lazarus
+- DLL_PyPi_Comebacker_Lazarus_March2024 :: Detects the Combacker malware used in Malicious PyPi Packages by Lazarus
+- DLL_RAT_WogRAT_March2024 :: Detects the Windows Version of WogRAT malware Developed in .NET
+- DLL_RAT_Xeno_Feb2024 :: Detects Xeno RAT malware based on PE properties
+- DLL_Stealer_Ov3rStealer_Feb2024 :: Detects Ov3r Stealer spread through FaceBook Ads
+- DLL_Stealer_Strela_March2024 :: Detects Strela Stealer malware used in a Large-Scale Campaign in Early 2024
+- DLL_TinyTurla_PE_Properties_Feb2024 :: Detects Tiny Turla Implant used by Turla APT based on PE import and export properties
+- DLL_TinyTurla_Strings_Feb2024 :: Detects Tiny Turla Implant used by Turla APT based on match strings
+- DLL_gh0st_Rootkit_second_stage_March2024 :: Detects gh0st RAT which is the second stage paylaod dropped by gh0st Root kit
+- Detect_SliverFox_String :: Detect files is `SliverFox` malware
+- Detect_SnakeKeylogger :: Detect first stage .NET binary of Snake keylogger infection
+- Diff_QuasarRAT_01 :: Identify QuasarRAT samples
+- Dll_Backdoor_FalseFront_Jan2024 :: Identifies a backdoor known as FalseFront which was used by Peach Sandstorm
+- DocBat1 :: This is a bat file which is a info stealer which take SS of the desktop and sends it to the attackers discord webhook using curl
+- ELF_Backdoor_ZipLine_Feb2024 :: Detects Zipline backdoor malware samples based on ELF properties and strings
+- ELF_RANSOMWARE_BLACKCAT :: Detect Linux version of BlackCat Ransomware
+- ELF_RAT_Bifrost_March2024 :: Detects x86 based Version of Bifrost RAT Targeting Linux
+- ELF_RAT_Dinodas_April2024 :: Detects Linux Variant of Dinodas RAT
+- EXE_Backdoor_GoBear_Feb2024 :: Detects the Go Bear Backdoor used by Kimsuky based on the PE export property
+- EXE_Backdoor_OceanMap_March2024 :: Detects Ocean Map Backdoor used by Russian Threat Group APT28
+- EXE_Backdoor_Rust_March2024 :: Detects an interesting Rust based backdoor/infostealer with one matched file linked to the Spica Backdoor used by Callisto
+- EXE_Python_Stealer_Jan2024 :: Detects Python Stealer based on generic strings and high entropy in resources
+- EXE_RAT_XWorm_April2024 :: Detects XWorm RAT malware based on the matched strings
+- EXE_RAT_vxRAT_March2024 :: Detects the Open Source RAT known as vxRAT
+- EXE_Ransomware_Mimic :: Detects Mimic ransomware samples based on the strings matched
+- EXE_Ransomware_Nevada_Feb2024 :: Detects Nevada ransomware aka Nokoyawa ransomware 2.1
+- EXE_Ransomware_Phobos_Feb2024 :: Detects Phobos Ransomware that was used to attack hospitals in Romania
+- EXE_Ransomware_Tuga_March2024 :: Detects Tuga Ransomware Samples
+- EXE_Stealer_44Caliber_Feb2024 :: Detects 44 Caliber Stealer malware based on strings
+- EXE_Stealer_Atlantida :: Detects the Atlantida Stealer malware based on matched strings
+- EXE_Stealer_Azorult_March2024 :: Detects Azorult infostealer malware based on matched strings and PE Properties
+- EXE_Stealer_CryptBot_March2024 :: Detects a new version of CryptBot Stealer
+- EXE_Stealer_Elusive_Feb2024 :: Detects Elusive Stealer malware
+- EXE_Stealer_Nightingale_Imphash_Jan2024 :: Detects Nightingale Stealer samples based on the import hash
+- EXE_Stealer_Nightingale_Jan2024 :: Detects Nightingale Stealer samples
+- EXE_Stealer_Phemedrone_Feb2024 :: Detects Phemedrone Stealer malware samples
+- EXE_Stealer_Planet_March2024 :: Detects Planet Stealer malware
+- EXE_Stealer_RisePro_Jan2024 :: Detects Rise Pro Stealer samples based on properties in the resources, manifest settings and PE Rich Header
+- EXE_Stealer_RustyStealer_Feb2024 :: Detects Rusty Stealer malware
+- EXE_Stealer_Strela_March2024 :: Detects Strela Stealer malware primarily based on the PE Imphash
+- EXE_Stealer_TrollStealer_Feb2024 :: Detects Troll Stealer malware used by Kimsuky based on the PE export properties
+- EXE_Stealer_WhiteSnake_Jan2024 :: Detects White Snake Stealer samples based on network strings and dotnet resources
+- EXE_Unknown_Backdoor_March2024 :: Detects an unknown backdoor
+- EXPLOIT_WinRAR_CVE_2023_38831_Aug23 :: Detects ZIP archives potentially exploiting CVE-2023-38831 in WinRAR
+- Embedded_RTF_File :: Related to CVE-2023-36884. Hunts for any zip-like archive (eg. office documents) that have an embedded .rtf file, based on the '.rtf' extension of the file.
+- Foudre_Backdoor :: Detects Foudre Backdoor
+- GHISLER_Stealer_1 :: GHISLER Golang based GO Stealer , POST /sendlog to http port 5000 , Userid HTTP header
+- GenericRedLineLike :: Matches RedLine-like stealer; may match its variants.
+- GenericUnknownDotnetRAT :: attempts to match instructions found in .NET backdoors related to XWorm/VenomRAT
+- Generic_FakeCaptchaPage :: attempts to match strings found in JavaScript/HTML used in captcha-styled malware delivery websites
+- Heuristics_ChromeCookieMonster :: attempts to match strings related to Chromium's CookieMonster; typically used in Chromium secrets scanning by stealers; heuristics rule - may match false positives
+- IcedID_ISO :: Detects IcedID ISO archives
+- ItsSoEasy_Ransomware :: Detect ItsSoEasy Ransomware (Itssoeasy-A)
+- ItsSoEasy_Ransomware_C_Var :: Detect ItsSoEasy Ransomware (Itssoeasy-A C.Var)
+- ItsSoEasy_Ransomware_Go_Var :: Detect ItsSoEasy Ransomware (Itssoeasy-A Go.Var)
+- ItsSoEasy_Ransomware_Py_Var :: Detect ItsSoEasy Ransomware (Itssoeasy-A Py.Var)
+- ItsSoEasy_Ransomware_basic :: Detect basics of ItsSoEasy Ransomware (Itssoeasy-A)
+- KatzStealer :: Detects KatzStealer executable
+- Kimsuky_related :: attempts to match httpSpy module potentially related to Kimsuky
+- LATAMHotel_Obfuscated_BAT :: Detects a campaign targeted towards LatinAmerican Hotels,generally leading to AsyncRAT
+- LimeRAT :: Detects Lime RAT malware samples based on the strings matched
+- LockBit3_ransomware :: Rule detecting Lockbit3 ransomware samples
+- LucaStealer :: Lucasstealer
+- Lumma_ChaCha20_KeyStub_v2 :: Detects Lumma Stealer ChaCha20 key setup and stub
+- MALWARE_Emotet_OneNote_Delivery_js_Mar23 :: Detects Microsoft OneNote files used to deliver Emotet (.js Payload)
+- MALWARE_Emotet_OneNote_Delivery_vbs_Mar23 :: Detects Microsoft OneNote files used to deliver Emotet (VBScript Payload)
+- MALWARE_Emotet_OneNote_Delivery_wsf_Mar23 :: Detects Microsoft OneNote files used to deliver Emotet (.wsf Payload)
+- MALWARE_OneNote_Delivery_Jan23 :: Detects suspicious Microsoft OneNote files used to deliver Malware
+- MALWARE_Storm0978_Underground_Ransomware_Jul23 :: Hunting rule for samples of 'Underground Ransomware', linked to IndustrialSpy and Storm-0978
+- MAL_RANSOM_WIN_LYNX_Oct25 :: Detects windows version of LYNX ransomware
+- MaksStealer :: Detects MaksStealer main payload
+- MarioLocker :: Detects MarioLocker Ransomware
+- Matanbuchus_MSI_2 :: Matanbuchus MSI contains CAB with DLL via Zip via HTML Smuggling via Zip as malspam attachment / TA570 who normally delivers Qakbot
+- MythStealer :: attempts to match the strings/instructions found in MythStealer
+- NitrogenRansomware :: Detects if a file is NitrogenRansomware
+- OdysseyStealer :: attempts to match the strings found in OdysseyStealer
+- OneNote_EmbeddedFiles_NoPictures :: OneNote files that contain embedded files that are not pictures.
+- PaaS_SpearPhishing_Feb23 :: Detects targeted spear phishing campaigns using a private PaaS based on filenames.
+- Play_Ransomware :: Detects Play Ransomware
+- QBOT_HTMLSmuggling_a :: Detects QBOT HTML smuggling variants
+- Qakbot_IsoCampaign :: Qakbot New Campaign ISO
+- RANSOMWARE :: This rule is meant to catch different types of ransomware.
+- RANSOM_ESXiArgs_Ransomware_Bash_Feb23 :: Detects the ESXiArgs Ransomware encryption bash script
+- RANSOM_ESXiArgs_Ransomware_Encryptor_Feb23 :: Detects the ESXiArgs Ransomware 'encrypt' binary
+- RANSOM_Magniber_ISO_Jan23 :: Detects Magniber Ransomware ISO files from fake Windows Update delivery method
+- RANSOM_Magniber_LNK_Jan23 :: Detects Magniber Ransomware LNK files from fake Windows Update delivery method
+- RaccoonStealerV2 :: Detects RecordBreaker, Raccoon Stealer 2.0
+- RaccoonV2 :: Detects Raccoon Stealer version 2.0 (called Recordbreaker before attribution).
+- Ransom_newRaaS :: NewbirthRaas_ransomware
+- RedLineStealerNyaxXCat :: RedLineStealer
+- STRRAT :: Detects STRRAT config filename
+- SUSP_Doc_WordXMLRels_May22 :: Detects a suspicious pattern in docx document.xml.rels file as seen in CVE-2022-30190 / Follina exploitation
+- SUSP_ZIP_LNK_PhishAttachment :: Detects suspicius tiny ZIP files with malicious lnk files
+- SilverRAT :: Detects SilverRAT
+- StealerDLL_Amadey :: Detects Amadey's Stealer DLL
+- Stealerium :: Detects Stealerium Stealer
+- StrelaStealer
+- UmbrealStealerEXIFData :: Detects UmbralStealer by obvious comment in EXIF Data
+- ValleyRAT :: Detects ValleyRAT
+- VanHelsing_Ransomware :: Detects VanHelsing Ransomware using file markers and behaviors
+- anyburn_iso_with_date :: Triggers on ISOs created with AnyBurn using volume names such as 12_19_2022.
+- apt43_machine_names :: Rule to detect APT43 LNK files via known usernames
+- avemaria_rat_yhub :: Detects AveMaria RAT a.k.a. WarZone
+- babuk_copycat_esxi :: Detection of Babuk esxi ransomware copies
+- botnet_Kaiten :: Kaiten botnet
+- botnet_RyM :: RyM botnet
+- botnet_Vixaati :: Vixaati botnet
+- botnet_Yakuza :: Yakuza botnet
+- botnet_dayzddos :: dayzddos botnet
+- botnet_dedsec :: dedsec botnet
+- botnet_unknown :: unknown botnet
+- bruteratelc4 :: A Rule to detect brute ratel stager payloads.
+- caspratique_lumma
+- dcrat_rkp :: Detects DCRat payloads
+- detect_Redline_Stealer
+- detect_Redline_Stealer_V2
+- detect_braodo_stealer :: This rule detects Broaodo Stealer
+- easyforme_infostealer
+- elf_rekoobe_b3_06c9 :: detects the Rekoobe Linux backdoor
+- globalnet_files :: Detect PE files compiled with PyInstaller with AntiDecompilation string. Observed in GlobalNet botnet campaign.
+- lsi_dcrat :: Identifies DCRat based on its string decoding routine
+- mal_strings_xwormRAT :: rule designed to match strings cvommonly associated with the XWorm RAT
+- phishing_win_tykit_svg :: Detects Tykit phishing .svg
+- tofsee_yhub :: Detects Tofsee botnet, also known as Gheg
+- unk_phishkit :: Unknown phishkit
+- win32_mystic_stealer :: Rule for detecting Mystic Stealer malware
+- win_aurora_stealer_a_706a :: detects Aurora Stealer samples
+- win_imminentrat_j1_7e208e97 :: detects the imminent rat
+- win_limerat_j1_00cfd931 :: detects the lime rat
+- win_redline_stealer_generic
+- win_strelastealer :: Detects Strela Stealer
+- win_xfiles_stealer_a8b373fb :: detects XFiles-Stealer
+- xwormStealer :: Infostealer / backdoor
+- yarahub_win_mystic_stealer_bytecodes_sep_2023
+- yarahub_win_njrat_bytecodes_V2_oct_2023
+
+## Low
+- AgentTesla_DIFF_Common_Strings_01 :: Identify partial Agent Tesla strings
+- Android_Admin_And_Accessibility :: This detects apps which request access to both device admin and the Android accessibility suite.
+- Android_Backdoor_Xamalicious :: Detects Xamalicious Android malware samples based on the strings matched
+- Android_BankingTrojan_Hydra :: Detects Hydra Android malware samples based on the strings matched
+- AppLaunch :: Detect files referencing .Net AppLaunch.exe
+- AteraAgent_RemoteAdmin_April_2024 :: Detects AteraAgent Remote Admin Tool
+- AtlasB_Batch_Crypter :: Detects the AtlasB batch crypter using certutil decode + temp dropper | tags: atlasb
+- BadIISModule :: attempts to match the strings and instructions found in BadIIS
+- BadIIS_JKornevHidden :: attempts to match the strings found in BadIIS variant of the JKornevHidden rootkit
+- BatModifier1 :: This is a bat file which is setup a game. 49509
+- BatModifier2 :: This is a bat file which is setup a game. 49509
+- BatModifier3 :: This is a bat file which is setup a game. 49509
+- BlackMoon :: Detects BlackMoon
+- Capability_Embedded_Lua :: Detects embedded Lua engines by looking for multiple Lua API symbols or env-var hooks
+- Credential_Leak_Detector_API_2 :: Detects Api keys from google or openai
+- DLL_BankingTrojan_Coyote_Feb2024 :: Detects Coyote malware samples based on the PE properties
+- DLL_Banking_Trojan_Chavecloak_March2024 :: Detects the lightshot DLL (Final Payload) which is the Chavecloak Banking Trojan which was used to target banks in Brazil
+- DLL_News_Penguin_Feb2024 :: Detects a DLL that was part of the tooling used by News Penguin to target orgs in Pakistan
+- DLL_Unknown_China_Feb2024 :: Detects an unknown suspicious DLL with Chinise artifacts that appears to impersonate Easy Language Program
+- DanaBot_12_2023
+- DarkTortilla_Installer :: Matches DarkTortilla installer strings/bytecode
+- DelBat1 :: This is a bat file which deletes the malicious file after the malicious files are executed
+- Detect_AnyDesk_Installer :: Detects malicious Python scripts that install AnyDesk
+- Detect_Dead_Family :: YARA rule for detecting files related to dead.dll family | tags: dead.dll
+- Detect_Go_GOMAXPROCS :: Detects Go binaries by the presence of runtime.GOMAXPROCS in the runtime metadata
+- Detect_NSIS_Nullsoft_Installer :: Detects NSIS installers by .ndata section + NSIS header string
+- Detect_PyInstaller :: Detects PyInstaller compiled executables across platforms
+- Detect_TSUNAMI :: Detects malicious Python scripts carrying the TSUNAMI suite
+- Disable_Defender :: Detect files disabling or modifying Windows Defender, Windows Firewall, or Microsoft Smartscreen
+- DreamDemon
+- EDR_Killer_EDR_Freeze_Tool :: Detects EDR-Freeze tool in memory - EDR/AV freezing malware | tags: edr-freeze
+- ELF_Implant_COATHANGER_Feb2024 :: Detects COTHANGER malware that spawns a BusyBox Reverse Shell
+- ELF_IoT_Persistence_Hunt :: Hunts for ELF files with persistence and download capabilities
+- ELF_Mirai :: Detects multiple Mirai variants
+- ELF_Toriilike_persist :: Detects Torii IoT Botnet (stealthier Mirai alternative) | tags: torii
+- ELF_Wiper_AcidRain_March2024 :: Detects the Acid Rain Wiper Malware
+- EXE_ICS_Indusroyer2_April2024 :: Detects Industroyer2 ICS malware targeting IEC-104 protocol
+- EXE_ICS_IronGate_April2024 :: Detects Iron Gate ICS malware targeting simulation environment which appears to be a PoC
+- EXE_ICS_Triton_April2024 :: Detects Triton ICS malware used to target SIS (Safety Instrumentation Systems)
+- EXE_Trojan_RomCom_Feb2024 :: Detects malware used by RomCom Threat Actor based on high resource entropy and other PE Import characteristics
+- EXE_Unknown_Byakugan_April2024 :: Detects Byakugan malware based on the PE properties
+- EXE_Virus_Neshta_March2024 :: Detects Neshta malware which is a 2005 Belarusian file infector virus written in Delphi
+- Gh0stKCP :: Detects HP-Socket ARQ and KCP implementations, which are used in Gh0stKCP. Forked from @stvemillertime's KCP catchall rule.
+- Gh0st_Variant :: Matches an unknown Gh0st variant that targets social media apps
+- Go_Malware_Yamux_Variant :: Detects a specific Go-based malware variant using the yamux library, with shared strings and constants across x86 and ARM architectures.
+- HydraPOS :: Detects HydraPOS
+- INDICATOR_SUSPICIOUS_Go_Infostealer_Discord_Generic :: Detects a Go-based infostealer that targets Discord tokens by locating the 'Local State' file, decrypting the master key with DPAPI, and exfiltrating tokens. | tags: godiscordstealer
+- JKornevHidden :: attempts to match the strings found in JKornev's Hidden rootkit
+- KRUEGER :: Identifies a Krueger binary
+- LokiPWS :: Detects LokiBot
+- MALDAC :: Detects samples designed to use WDAC to disable AV/EDR. False positives may occur.
+- MALWARE_APT29_SVG_Delivery_Jul23 :: Detects Javascript code in crafted SVG files delivering malware
+- MAL_JAR_SoupDealer_Aug_09 :: This rule detects samples that use the SoupDealer loader. | tags: windows, jar, malicious, loader
+- MAL_lockbit4_rc4_alg :: Detect the implementation of RC4 Algorithm by Lockbit4.0
+- MX_fin_custom_allakore_rat :: Find MX fin custom function names and prefixes.
+- MacOS_Stealer :: Detects MacOS stealer malware attributed to 'mentalpositive' | tags: macosstealer
+- NET_LOADER_Invoice :: .NET loader with payload in lsmsix.jpg | tags: file
+- Old_Code__Signature_AnyDesk_Feb2024 :: Detects files with older and no longer valid code signing certifcates of AnyDesk
+- OleDownloader :: This is a ole file which is accessing some url
+- OleTrojan :: This is a ole file which is accessing some url. 49496
+- PNG_File_Malware_Abuse :: Detects malicious PNG files leveraging this technique
+- PacketSDK_Proxy_Tunnel_Malware :: Detects PacketSDK-based proxy/tunnel component used in sysvideo/onedrivesync case | tags: packetsdk_tunnel
+- PassProtected_ZIP_ISO_file :: Detects container formats commonly smuggled through password-protected zips
+- PickleOrNot :: Detects Pickle files
+- PikaBot_Stage1_20240222 :: Attempts to identify common strings used in a stage 1 Pikabot maldoc. During the infection, the malicious .js file this rule attempts to detect was observed in a ZIP file.
+- Python_MasePie :: Detects the Masepie malware Python script based on matched strings
+- RABBITHUNT_cls
+- RAT_remcos_strings :: This rule detects the remcos through your specific strings.
+- Ransomware_Win32_NebulaRun :: Detects NebulaRun Ransomware variant | tags: nebula
+- RedCurl_FSABIN
+- Runtime_Broker_Variant_1 :: Detecting malicious Runtime Broker
+- Runtime_Broker_Variant_2 :: Detecting malicious Runtime Broker
+- SUSP_HxD_Icon_Anomaly_May23_1 :: Detects suspicious use of the the free hex editor HxD's icon in PE files that don't seem to be a legitimate version of HxD
+- SUSP_NET_Cassandra_Protector_Feb_11 :: This rule detects samples built with Cassandra. | tags: windows, exe, dotnet, suspicious, protector
+- SUSP_NET_Large_Static_Array_In_Small_File_Jan24 :: Detects large static arrays in small .NET files
+- SUSP_OBF_NET_ConfuserEx_Name_Pattern_Jan24 :: Detects Naming Pattern used by ConfuserEx. ConfuserEx is a widely used open source obfuscator often found in malware
+- SUSP_ZIP_Smuggling_Jun01 :: ZIP archives with data smuggled between last file record and the central directory.
+- SUS_UNC_InEmail :: Looks for a suspicious UNC string in .eml files & .ole files
+- SUS_Unsigned_APPX_MSIX_Installer_Feb23 :: Detects suspicious, unsigned Microsoft Windows APPX/MSIX Installer Packages
+- SUS_Unsigned_APPX_MSIX_Manifest_Feb23 :: Detects suspicious Microsoft Windows APPX/MSIX Installer Manifests
+- ScanStringsInsocks5systemz :: Scans presence of the found strings using the in-house brute force method
+- ScareCrow_Malware :: Identify ScareCrow/GoShell samples
+- SelfExtractingRAR :: Detects an SFX archive with automatic script execution
+- ShadowOpCode_RustMe_Keylogger_STRICT_v1 :: RustMe keylogger x64: WH_KEYBOARD_LL via imports + libcurl SMTP to Gmail + US layout + DebugConfig persistence | tags: rustme
+- ShadowOpCode_Win_Keylogger_SMTP_GENERIC_v1 :: Windows keylogger (generic): WH_KEYBOARD_LL via imports + ToUnicode pipeline + SMTP artifacts | tags: generic-keylogger-smtp
+- SimpleTea :: attempts to match strings/instructions found in SimpleTea
+- SocGholish_Custom_Base64 :: Detects custom base64 used by SocGholish
+- StealcConfig :: Detects Stealc Config
+- StealcV2 :: attempts to match the instructions found in StealcV2
+- Stealer_Stealc :: attempts to match instructions/strings found in Stealc
+- Sus_All_Windows_PE_Malware :: Detects Windows PE malware of all types, avoids non-executables like .html | tags: generic
+- Sus_AnyDesk_Attempts_Feb2024 :: Detects files attempting to impersonate AnyDesk Windows Version
+- Suspicious_Encoded_PS_String_20251105 :: Detects ASCII string
+- Suspicious_Golang_Binary :: Triage: Golang-compiled binary with suspicious OS/persistence/network strings (not family-specific)
+- Suspicious_PowerShellObjectCreation
+- Suspicious_Process :: Suspicious process creation
+- TAR_Utility_XZ_Utils_March2024
+- TH_Generic_MassHunt_Win_Malware_2025_CYFARE :: Generic Windows malware mass-hunt rule - 2025
+- TTP_Chinese_Dropper_March2024 :: Detects Exetutables which are written in the Chinese Simplified Language and contain an embedded DLL within them
+- TTP_Impersonating_Google_Updates_March2024 :: Detects Windows executables which are impersonating Google Update utilities
+- Targeted_SideWinder_Files_July2024 :: Rule detecting maldoc used for targeting Egypt and Pakistan
+- UNKNOWN_News_Penguin_Feb2024 :: Detects an unknown File Type that was part of the tooling used by News Penguin to target orgs in Pakistan
+- Updater :: Detects a malware script with specific characteristics and strings such as Updater
+- VBS_Gamaredon_GamaWiper_Cleanup_Disruption_2025_12 :: Detects VBScript cleanup/disruption tool wiping HKCU persistence, deleting C:\\Users recursively, deleting scheduled tasks, and killing script processes | tags: vbs, wscript, cleanup, disruption, persistence-removal
+- WIN32_MALWR_POSSIBLE_EMOTET_07_20 :: Possible EMOTET payload
+- WIN32_MAL_TROJ_DARKME :: Detects DARKME trojan variants.
+- WIN32_MAL_TROJ_UPATRE_SMBG :: Detects UPATRE Trojan variant.
+- Whitelock_AESGCM_KeySetup_Stub_x64_v1 :: AES-GCM key and nonce copy stub in 64-bit PE (rep movs patterns)
+- Win_b64_pwshl
+- XLS_STRINGS :: Detect Strings targeting Bangladesh
+- XWorm_3_0_3_1_Detection2 :: Detects XWorm versions 3.0 and 3.1 - New | tags: xworm
+- ZPAQ :: Detects files commpressed with ZPAQ alg.
+- ZeuS :: Detects ZeuS
+- aachum_Stealcv2 :: Detects new version of Stealc.
+- agenttesla_win_generic
+- android_apk_hook
+- babbleloader_020725 :: test
+- blocksig
+- botnet_mortem_qbot_gafgyt :: Some strings that stand out from a publicly-available botnet source code (Mortem-qBot-Botnet-Src) | tags: gafgyt
+- bumblebee_win_generic
+- cobalt_strike_tmp01925d3f :: files - file ~tmp01925d3f.exe
+- crime_unidentified_118 :: Detects malware family unidentified_118
+- dependsonpythonailib :: Hunts for dependencies on Python AI libraries
+- detect_qbot_v5 :: just a rule for Qakbot v5
+- elf_airashi_2025_strings_yarahub :: MIPS BE ELF IoT botnet; matches AIRASHI/kitty markers | tags: airashi, aisuru
+- embargo_win_generic
+- gafgyt_ansi_beacon :: Detects Gafgyt variant with custom ANSI-colored IP beacon | tags: gafgyt
+- garbled_obf_golang
+- generic_mal_netad_collector :: This rule detects generic samples that implement network/active directory info collection.
+- golang_bin_JCorn_CSC846 :: CSC-846 Golang detection ruleset
+- gorilla_bot :: Detects GorillaBot runtime strings
+- hunt_redline_stealer :: Search for samples containing certain fingerprints
+- kryptina_encryptor :: Matches on kryptina encryptor binary
+- lnk_from_chinese :: what the rule does
+- loader_win_bumblebee :: Find BumbleBee samples based on specific strings
+- lockbitblack_ransomnote :: Hunting rule for LockBit Black/3.0 ransom notes
+- lsi_remcos2 :: Remcos_V5 Payload
+- malware_bumblebee_packed :: Detects the packer used by bumblebee, the rule is based on the code responsible for allocating memory for a critical structure in its logic. | tags: bumblebee
+- mht_inside_word :: Detect embedded mht files inside microsfot word.
+- php_hide_wp_plugin_a8b373fb :: Detects WordPress plugins that are trying to hide themselves
+- private_string_search :: Hunting for specific text strings
+- recordbreaker_win_generic
+- redline_win_generic
+- rondodox_elf_multiarch :: Detects RondoDox (Rondo) botnet ELF multi architecture variants | tags: rondodox
+- sfx_pdb_winrar_restrict :: Detect interesting files containing sfx with pdb paths.
+- signed_sys_with_vulnerablity :: signed_sys_with_vulnerablity
+- smokedham
+- smokedham_installer
+- stealc_ioc_hifi :: Simple string rule to identify current stealc samples
+- telegram_bot_api :: Detects file containing Telegram Bot API
+- test_Malaysia :: Detects file containing malaysia string
+- testlumma
+- turkish_comments :: Detects Turkish comments
+- u42_crime_win_heartcrypt :: HeartCrypt PaaS hunting rule.
+- win32_younglotus :: Rule for detecting YoungLotus malware
+- win_Eternity :: Eternity function routines
+- win_agent_tesla_ab4444e9 :: detects Agent Tesla
+- win_amadey_062025 :: This rule detects intrinsic patterns of Amadey version 5.34.
+- win_amadey_bytecodes_oct_2023
+- win_danabot_cdf38827 :: detects DanaBot
+- win_dexter_generic
+- win_gcleaner_de41 :: detects GCleaner
+- win_lumma_generic
+- win_origin_logger_b5c8 :: detects Orign Logger
+- win_qakbot_malped :: Detects win.qakbot.
+- win_stealc_generic
+- win_tofsee_bot :: Tofsee malware
+- win_vidar_generic
+- win_x86_x64_Mirai :: Detects Mirai
+- xlsb_adj :: Regla para correo malicioso (adjunto)
+- xlsb_rule :: Regla para correo malicioso
+- yarahub_win_stealc_bytecodes_oct_2023
+- yes
+

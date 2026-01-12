@@ -7,9 +7,30 @@ services:
       - apt_data:/data
     command: >
       bash -lc "mkdir -p /data/ir &&
+      mkdir -p /data/ir/pki &&
+      python3 /work/ir/scripts/bootstrap_pki.py
+        --pki-dir /data/ir/pki
+        --hosts 'dfir.skplanet.com,localhost,ir-gateway' &&
       python3 /work/scripts/yaraify_buckets_from_md.py
         --in /work/yaraify_rules_classification.md
         --out /data/ir/yarahub_buckets.json"
+
+  ir-gateway:
+    image: nginx:1.27-alpine
+    depends_on:
+      - ir-orchestrator
+    ports:
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./ir/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - apt_data:/data
+    command: >
+      sh -lc "mkdir -p /etc/nginx/pki &&
+      cp /data/ir/pki/ca.crt.pem /etc/nginx/pki/ca.crt.pem &&
+      cp /data/ir/pki/server.crt.pem /etc/nginx/pki/server.crt.pem &&
+      cp /data/ir/pki/server.key.pem /etc/nginx/pki/server.key.pem &&
+      exec nginx -g 'daemon off;'"
 
   ir-orchestrator:
     build: .
@@ -35,16 +56,18 @@ services:
     build: .
     working_dir: /work
     depends_on:
-      - ir-orchestrator
+      - ir-gateway
     restart: unless-stopped
     volumes:
       - .:/work:ro
       - apt_data:/data
     environment:
       - IR_SHARED_KEY=dev
-      - IR_ORCH_URL=http://ir-orchestrator:8080
+      - IR_ORCH_URL=https://ir-gateway:443
+      - IR_ENROLL_URL=https://ir-gateway:8443
       - IR_ENROLL_MTLS=1
       - IR_MTLS_DIR=/data/ir/mtls
+      - IR_TLS_CA=/data/ir/pki/ca.crt.pem
     command: >
       bash -lc "python3 -m ir.agent.run --agent-id host-01 --assume-isolated --poll-seconds 10 --startup-wait-seconds 60 --enroll-mtls"
 
@@ -56,11 +79,12 @@ services:
       - apt_data:/data
     environment:
       - IR_SHARED_KEY=dev
-      - IR_ORCH_URL=http://ir-orchestrator:8080
+      - IR_ORCH_URL=https://ir-gateway:443
       - IR_YARAHUB_BUCKETS=/data/ir/yarahub_buckets.json
       - IR_YARAHUB_COMPILED=/data/yaraify/yarahub.compiled
       - IR_SCAN_TARGET=/data/mdmp_extracted
       - IR_DUMP_DIR=/data/ir/dumps_inbox
+      - IR_TLS_CA=/data/ir/pki/ca.crt.pem
 
 volumes:
   apt_data:

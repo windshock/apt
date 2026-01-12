@@ -25,7 +25,12 @@ docker compose -f docker-compose.ir.yml up
 This will also create:
 - YaraHub buckets: `/data/ir/yarahub_buckets.json`
 - MVP internal CA: `/data/ir/pki/ca.*.pem`
+- MVP gateway server cert: `/data/ir/pki/server.*.pem`
 - Demo agent mTLS material (CSR-based enrollment): `/data/ir/mtls/<agent_id>/client.*.pem`
+
+Network (local compose):
+- `https://localhost:443`: Orchestrator API (mTLS required; shared key still required in MVP)
+- `https://localhost:8443`: Enrollment-only endpoints (no client cert; shared key required)
 
 3) Create a case (simulate Cybereason trigger):
 

@@ -1,8 +1,14 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash ca-certificates curl grep gawk coreutils \
+    bash ca-certificates curl grep gawk coreutils openssl \
     p7zip-full unzip file yara \
+    # FUSE userspace + libs (MemProcFS mount)
+    fuse libfuse2 \
+    # MemProcFS deps
+    libusb-1.0-0 lz4 \
+    # debugging helpers
+    procps util-linux \
     git \
   && rm -rf /var/lib/apt/lists/*
 

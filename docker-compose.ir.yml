@@ -1,0 +1,67 @@
+services:
+  ir-init:
+    build: .
+    working_dir: /work
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    command: >
+      bash -lc "mkdir -p /data/ir &&
+      python3 /work/scripts/yaraify_buckets_from_md.py
+        --in /work/yaraify_rules_classification.md
+        --out /data/ir/yarahub_buckets.json"
+
+  ir-orchestrator:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-init
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_DATA_DIR=/data/ir
+      - IR_DB_PATH=/data/ir/orchestrator.db
+      - IR_EVIDENCE_DIR=/data/ir/evidence
+      - IR_PKI_DIR=/data/ir/pki
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -lc "python3 -m uvicorn ir.orchestrator.app:app --host 0.0.0.0 --port 8080"
+
+  ir-agent-demo:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-orchestrator
+    restart: unless-stopped
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_ORCH_URL=http://ir-orchestrator:8080
+      - IR_ENROLL_MTLS=1
+      - IR_MTLS_DIR=/data/ir/mtls
+    command: >
+      bash -lc "python3 -m ir.agent.run --agent-id host-01 --assume-isolated --poll-seconds 10 --startup-wait-seconds 60 --enroll-mtls"
+
+  ir-worker:
+    build: .
+    working_dir: /work
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_ORCH_URL=http://ir-orchestrator:8080
+      - IR_YARAHUB_BUCKETS=/data/ir/yarahub_buckets.json
+      - IR_YARAHUB_COMPILED=/data/yaraify/yarahub.compiled
+      - IR_SCAN_TARGET=/data/mdmp_extracted
+      - IR_DUMP_DIR=/data/ir/dumps_inbox
+
+volumes:
+  apt_data:
+

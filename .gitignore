@@ -25,4 +25,20 @@ loki/
 
 _yaraify/
 
+# macOS
+.DS_Store
+
+# Local TLS/key materials (do not commit)
+*.pem
+*.p12
+*.key
+*.crt
+
+# TLS materials (do not commit)
+skplanet.com/
+skplanet.com.zip
+
+# vendored source checkouts (keep out of git; use scripts/docs to fetch)
+vendor/
+
 

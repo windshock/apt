@@ -8,4 +8,10 @@ colorama==0.4.6
 rfc5424-logging-handler==1.4.3
 netaddr==1.3.0
 
+# IR Orchestrator/Worker/Agent (MVP)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+cryptography==44.0.1
+
 

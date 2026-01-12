@@ -1,0 +1,117 @@
+services:
+  ir-init:
+    build: .
+    working_dir: /work
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    command: >
+      bash -lc "mkdir -p /data/ir &&
+      python3 /work/ir/scripts/bootstrap_pki.py --pki-dir /data/ir/pki &&
+      python3 /work/scripts/yaraify_buckets_from_md.py --in /work/yaraify_rules_classification.md --out /data/ir/yarahub_buckets.json"
+
+  ir-tools:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-init
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    command: >
+      bash -lc "python3 /work/ir/scripts/fetch_memprocfs.py --out-dir /data/tools/memprocfs &&
+      python3 /work/ir/scripts/fetch_libleechgrpc.py --out-dir /data/tools/memprocfs/lib"
+
+  ir-orchestrator:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-init
+      - ir-tools
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_DATA_DIR=/data/ir
+      - IR_DB_PATH=/data/ir/orchestrator.db
+      - IR_EVIDENCE_DIR=/data/ir/evidence
+      - IR_PKI_DIR=/data/ir/pki
+      - IR_LEECHAGENT_TLS_DIR=/data/ir/leechagent_tls
+      # PoC override: demo agent runs in docker, but LeechAgent runs on Windows endpoint.
+      - IR_LEECHAGENT_OVERRIDE_HOST=10.202.5.247
+      - IR_LEECHAGENT_OVERRIDE_SERVER_NAME=win-test-01
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -lc "python3 -m uvicorn ir.orchestrator.app:app --host 0.0.0.0 --port 8080"
+
+  ir-gateway:
+    image: nginx:1.27-alpine
+    depends_on:
+      - ir-orchestrator
+    networks:
+      default:
+        aliases:
+          - dfir.skplanet.com
+    ports:
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./ir/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - apt_data:/data
+    command: >
+      sh -lc "mkdir -p /etc/nginx/pki &&
+      cp /data/ir/gateway_tls/server.crt.pem /etc/nginx/pki/server.crt.pem &&
+      cp /data/ir/gateway_tls/server.key.pem /etc/nginx/pki/server.key.pem &&
+      cp /data/ir/pki/ca.crt.pem /etc/nginx/pki/ca.crt.pem &&
+      nginx -g 'daemon off;'"
+
+  ir-agent-demo:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-gateway
+    restart: unless-stopped
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_ENROLL_URL=https://dfir.skplanet.com:8443
+      - IR_ORCH_URL=https://dfir.skplanet.com:443
+      - IR_ENROLL_MTLS=1
+      - IR_MTLS_DIR=/data/ir/mtls
+      - IR_TLS_CA=/data/ir/gateway_tls/public_ca.pem
+    command: >
+      bash -lc "python3 -m ir.agent.run --agent-id host-01 --assume-isolated --startup-wait-seconds 60 --poll-seconds 10 --enroll-mtls"
+
+  ir-worker:
+    build: .
+    working_dir: /work
+    depends_on:
+      - ir-gateway
+    volumes:
+      - .:/work:ro
+      - apt_data:/data
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    environment:
+      - IR_SHARED_KEY=dev
+      - IR_ORCH_URL=https://dfir.skplanet.com:443
+      - IR_TLS_CA=/data/ir/gateway_tls/public_ca.pem
+      - IR_TLS_CERT=/data/ir/mtls/host-01/client.crt.pem
+      - IR_TLS_KEY=/data/ir/mtls/host-01/client.key.pem
+      - IR_YARAHUB_BUCKETS=/data/ir/yarahub_buckets.json
+      - IR_YARAHUB_COMPILED=/data/yaraify/yarahub.compiled
+      - IR_SCAN_TARGET=/data/mdmp_extracted
+      - IR_DUMP_DIR=/data/ir/dumps_inbox
+
+volumes:
+  apt_data:
+

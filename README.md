@@ -9,6 +9,14 @@
 - 다운로드된 샘플/덤프는 **절대 실행하지 마세요.**
 - 결과/아티팩트는 Docker 볼륨(`/data`)에만 쌓이도록 구성합니다.
 
+## IR (격리 이후 자동 메모리 분석 워크플로우) - MVP
+
+이 레포는 기존 `apt`(샘플/덤프 수집·YARA 실험) 외에,
+`격리_이후_자동_메모리_분석_워크플로우_개발요구사항.md` 기반의 **IR Orchestrator/Worker/Agent 스캐폴딩**을 `ir/`에 포함합니다.
+
+- 실행: `docker compose -f docker-compose.ir.yml up`
+- 가이드: `ir/README.md`
+
 ## 구성 파일/스크립트
 
 - `malwarebazaar_hunt.py`: MalwareBazaar에서 태그 기준으로 해시 목록(예: Amadey 100개) 생성

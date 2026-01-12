@@ -21,6 +21,10 @@ class Settings:
     leechagent_tls_dir: Path
     shared_key: str
     require_signature: bool
+    # UI (dashboard)
+    ui_enabled: bool
+    ui_user: str
+    ui_password: str
     # WorkOrder defaults (production knobs)
     memprocfs_default_enabled: bool
     memprocfs_mount_base: Path
@@ -40,6 +44,9 @@ class Settings:
         leechagent_tls_dir = Path(os.getenv("IR_LEECHAGENT_TLS_DIR", str(data_dir / "leechagent_tls"))).resolve()
         shared_key = os.getenv("IR_SHARED_KEY", "dev")
         require_signature = _env_bool("IR_REQUIRE_SIGNATURE", False)
+        ui_enabled = _env_bool("IR_UI_ENABLED", True)
+        ui_user = os.getenv("IR_UI_USER", "ir")
+        ui_password = os.getenv("IR_UI_PASSWORD", "ir")
         memprocfs_default_enabled = _env_bool("IR_MEMPROCFS_DEFAULT_ENABLED", True)
         memprocfs_mount_base = Path(os.getenv("IR_MEMPROCFS_MOUNT_BASE", str(data_dir / "memprocfs_mount"))).resolve()
         memprocfs_keepalive_interval_seconds = int(os.getenv("IR_MEMPROCFS_KEEPALIVE_INTERVAL_SECONDS", "20"))
@@ -56,6 +63,9 @@ class Settings:
             leechagent_tls_dir=leechagent_tls_dir,
             shared_key=shared_key,
             require_signature=require_signature,
+            ui_enabled=ui_enabled,
+            ui_user=ui_user,
+            ui_password=ui_password,
             memprocfs_default_enabled=memprocfs_default_enabled,
             memprocfs_mount_base=memprocfs_mount_base,
             memprocfs_keepalive_interval_seconds=memprocfs_keepalive_interval_seconds,

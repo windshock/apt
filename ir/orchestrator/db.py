@@ -155,6 +155,46 @@ class OrchestratorDB:
             row = con.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
             return dict(row) if row else None
 
+    def list_cases(self, *, limit: int = 200) -> list[dict[str, Any]]:
+        with self.connect() as con:
+            rows = con.execute(
+                "SELECT * FROM cases ORDER BY updated_at DESC LIMIT ?",
+                (int(limit),),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_result(self, *, case_id: str) -> dict[str, Any] | None:
+        with self.connect() as con:
+            row = con.execute("SELECT result_json, received_at FROM results WHERE case_id = ?", (case_id,)).fetchone()
+            if not row:
+                return None
+            obj = json.loads(row["result_json"])
+            obj["_received_at"] = row["received_at"]
+            return obj
+
+    def list_audit(self, *, case_id: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
+        with self.connect() as con:
+            if case_id:
+                rows = con.execute(
+                    "SELECT * FROM audit_log WHERE case_id = ? ORDER BY id DESC LIMIT ?",
+                    (case_id, int(limit)),
+                ).fetchall()
+            else:
+                rows = con.execute(
+                    "SELECT * FROM audit_log ORDER BY id DESC LIMIT ?",
+                    (int(limit),),
+                ).fetchall()
+            out: list[dict[str, Any]] = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["detail"] = json.loads(d.get("detail_json") or "{}")
+                except Exception:
+                    d["detail"] = {}
+                d.pop("detail_json", None)
+                out.append(d)
+            return out
+
     def set_work_order(self, *, case_id: str, work_order: dict[str, Any]) -> None:
         with self.connect() as con:
             con.execute(

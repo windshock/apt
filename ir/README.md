@@ -52,6 +52,18 @@ Artifacts:
 - SQLite: `/data/ir/orchestrator.db` (inside container volume)
 - Evidence: `/data/ir/evidence/<case_id>/...`
 
+### Dashboard (Orchestrator UI)
+
+The orchestrator exposes a simple dashboard at:
+- `http://localhost:8080/ui` (when accessing `ir-orchestrator` directly), or
+- `https://localhost:443/ui` (when going through `ir-gateway` / mTLS)
+
+UI auth uses HTTP Basic:
+- user: `IR_UI_USER` (default: `ir`)
+- pass: `IR_UI_PASSWORD` (default: `ir`)
+
+To disable the UI entirely: `IR_UI_ENABLED=0`.
+
 ### Network decisions (production)
 
 - **LeechAgent ↔ Worker**: gRPC over **TCP 28474** (DFIR server → isolated PC)

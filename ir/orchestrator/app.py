@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from ir.common.models import (
     AgentJoinRequest,
@@ -20,7 +20,7 @@ from ir.orchestrator.config import Settings
 from ir.orchestrator.db import OrchestratorDB
 from ir.orchestrator.leechagent_tls import LeechAgentTLSIssuer
 from ir.orchestrator.pki import PKIPaths, SimpleCA
-from ir.orchestrator.security import require_auth
+from ir.orchestrator.security import require_auth, require_ui_auth, ui_basic_dep
 
 
 def _case_key(endpoint_id: str, malop_id: str) -> str:
@@ -79,9 +79,161 @@ def create_app() -> FastAPI:
     async def _auth_dep(request: Request) -> str:
         return await require_auth(request, settings)
 
+    basic = ui_basic_dep()
+
+    def _hit_counts(result: dict) -> dict[str, int]:
+        """
+        Best-effort: count hits by level from ScanResult payload.
+        """
+        hits = result.get("hits") or []
+        high = 0
+        mid = 0
+        low = 0
+        for h in hits:
+            lvl = (h or {}).get("level")
+            if lvl == "HIGH":
+                high += 1
+            elif lvl == "MID":
+                mid += 1
+            elif lvl == "LOW":
+                low += 1
+        return {"high": high, "mid": mid, "low": low, "total": len(hits)}
+
+    def _ui_page() -> str:
+        # Simple self-contained HTML (no external assets) + auto-refresh polling.
+        return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IR Dashboard</title>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:16px; color:#111;}
+    h1{font-size:18px; margin:0 0 12px;}
+    .bar{display:flex; gap:12px; align-items:center; margin:8px 0 14px;}
+    .muted{color:#666; font-size:12px;}
+    .pill{padding:2px 8px; border-radius:999px; font-size:12px; background:#f3f4f6;}
+    table{border-collapse:collapse; width:100%;}
+    th,td{border-bottom:1px solid #e5e7eb; padding:8px; font-size:12px; vertical-align:top;}
+    th{text-align:left; color:#374151; position:sticky; top:0; background:#fff;}
+    tr:hover{background:#fafafa;}
+    a{color:#2563eb; text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:11px;}
+    .status{font-weight:600;}
+  </style>
+</head>
+<body>
+  <h1>IR Dashboard</h1>
+  <div class="bar">
+    <span class="pill" id="caseCount">cases: -</span>
+    <span class="pill" id="lastUpdated">updated: -</span>
+    <span class="muted">Auto-refresh: 5s</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>updated</th>
+        <th>status</th>
+        <th>endpoint</th>
+        <th>malop</th>
+        <th>case_id</th>
+        <th>hits (H/M/L)</th>
+        <th>links</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <script>
+    async function load(){
+      const r = await fetch('/ui/api/cases');
+      if(!r.ok){
+        document.getElementById('rows').innerHTML = '<tr><td colspan="7">failed to load: ' + r.status + '</td></tr>';
+        return;
+      }
+      const data = await r.json();
+      const rows = data.cases || [];
+      document.getElementById('caseCount').textContent = 'cases: ' + rows.length;
+      document.getElementById('lastUpdated').textContent = 'updated: ' + new Date().toISOString();
+      const tb = document.getElementById('rows');
+      tb.innerHTML = '';
+      for(const c of rows){
+        const tr = document.createElement('tr');
+        const hits = (c.hit_counts ? (c.hit_counts.high + '/' + c.hit_counts.mid + '/' + c.hit_counts.low) : '-');
+        tr.innerHTML =
+          '<td><code>' + (c.updated_at || '') + '</code></td>' +
+          '<td class="status">' + (c.status || '') + '</td>' +
+          '<td>' + (c.endpoint_id || '') + '</td>' +
+          '<td>' + (c.malop_id || '') + '</td>' +
+          '<td><code>' + (c.case_id || '') + '</code></td>' +
+          '<td>' + hits + '</td>' +
+          '<td>' +
+            '<a href="/ui/api/cases/' + c.case_id + '" target="_blank">detail</a>' +
+          '</td>';
+        tb.appendChild(tr);
+      }
+    }
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>"""
+
     @app.get("/healthz")
     async def healthz():
         return {"ok": True}
+
+    @app.get("/ui", response_class=HTMLResponse)
+    async def ui_root(credentials=Depends(basic)):
+        require_ui_auth(credentials, settings)
+        return HTMLResponse(content=_ui_page())
+
+    @app.get("/ui/api/cases")
+    async def ui_cases(credentials=Depends(basic)):
+        require_ui_auth(credentials, settings)
+        rows = db.list_cases(limit=500)
+        out = []
+        for c in rows:
+            r = db.get_result(case_id=c["case_id"])
+            hit_counts = _hit_counts(r) if r else None
+            out.append(
+                {
+                    "case_id": c.get("case_id"),
+                    "case_key": c.get("case_key"),
+                    "status": c.get("status"),
+                    "endpoint_id": c.get("endpoint_id"),
+                    "malop_id": c.get("malop_id"),
+                    "created_at": c.get("created_at"),
+                    "updated_at": c.get("updated_at"),
+                    "has_result": bool(r),
+                    "result_received_at": (r or {}).get("_received_at") if r else None,
+                    "hit_counts": hit_counts,
+                }
+            )
+        return {"cases": out}
+
+    @app.get("/ui/api/cases/{case_id}")
+    async def ui_case_detail(case_id: str, credentials=Depends(basic)):
+        require_ui_auth(credentials, settings)
+        case = db.get_case(case_id=case_id)
+        if not case:
+            raise HTTPException(status_code=404, detail="case not found")
+        event = {}
+        try:
+            event = json.loads(case.get("event_json") or "{}")
+        except Exception:
+            event = {}
+        wo = db.get_work_order(case_id=case_id)
+        result = db.get_result(case_id=case_id)
+        audit = db.list_audit(case_id=case_id, limit=200)
+        return {
+            "case": {k: v for k, v in case.items() if k != "event_json"},
+            "event": event,
+            "work_order": wo,
+            "result": result,
+            "hit_counts": (_hit_counts(result) if result else None),
+            "audit": audit,
+        }
 
     @app.get("/v1/pki/ca.crt.pem")
     async def get_ca_cert(_key: str = Depends(_auth_dep)):

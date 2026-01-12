@@ -342,6 +342,12 @@ YaraHub(Yaraify) 룰셋은 High/Mid가 “태깅” 성격으로 동시에 발�
 * 실패율(stage별)
 * 덤프 용량
 
+대시보드(권장):
+
+* Orchestrator는 **Dashboard(UI)** 를 제공하여, 현재 분석 중/완료/실패 케이스의 상태를 한 눈에 볼 수 있어야 한다.
+  * 표시 항목(최소): case_id, endpoint_id/hostname, status, updated_at, (가능하면) High/Mid/Low 히트 카운트, 결과 업로드 시각
+  * 보호: 운영에서는 mTLS를 우선하고, UI 자체도 별도 인증(예: Basic/SSO)으로 보호
+
 ---
 
 ## 9. 배포 요구사항

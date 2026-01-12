@@ -277,8 +277,13 @@ YaraHub(=Yaraify) 룰은 **샘플 패밀리 확증용**이라기보다, HA regio
   예: `meth_get_eip`, `pe_detect_tls_callbacks`, `pe_no_import_table`, `Sus_CMD_Powershell_Usage`, `golang_bin_JCorn_CSC846`, `DetectEncryptedVariants`
 - **중(Mid, 프레임워크/캠페인 흔적)**: 공격 체인/툴 흔적(예: Cobalt Strike) 또는 과잉 태그 가능성이 있는 행위 카테고리  
   예: `cobalt_strike_tmp01925d3f`, `RANSOMWARE`, `ScanStringsInsocks5systemz`
-- **하(Low, 패밀리 단서)**: 특정 패밀리/스틸러 계열 등 “확증”에 가까운 룰  
+- **하(Low, 패밀리 단서)**: 특정 패밀리/스틸러 계열 등 “확증(어트리뷰션 힌트)”에 가까운 룰  
   예: `StealcV2`, `aachum_Stealcv2`, `win_lumma_generic`
+
+중요:
+- **Low는 ‘자동 대응 트리거’가 아니라, 분석가가 최종 라벨링/우선순위에 참고하는 단서**로 쓰는 것을 권장합니다.
+  - 이유: 패밀리/아이덴티티 룰은 종종 문자열/부분 패턴 기반이라 **환경/코퍼스에 따라 FP가 생길 수 있고**, 자동화 액션(덤프/격리/티켓)과 결합되면 운영 리스크가 커질 수 있습니다.
+  - 따라서 본 프로젝트의 IR 자동화 기본 정책은 **High+Mid만 자동 실행/판단에 사용**하고, Low는 결과에 **태그로만 포함**합니다.
 
 핵심은:
 - **상/중은 “이 메모리가 어떤 성격인가”를 설명하는 태그**로 사용

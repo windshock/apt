@@ -321,6 +321,8 @@ def main() -> int:
         ip_val = detect_local_ip_for_target(args.orch_url) or None
     payload = {"agent_id": args.agent_id, "hostname": args.hostname, "ip": ip_val, "capabilities": {}}
 
+    leech_p12_password: str | None = None
+
     if args.fetch_leechagent_tls:
         out_dir = args.leechagent_tls_out or os.path.join(args.mtls_out, args.agent_id, "leechagent_tls")
         try:
@@ -333,6 +335,7 @@ def main() -> int:
                 ip=None,
                 out_dir=out_dir,
             )
+            leech_p12_password = (files.get("p12_password") or "").strip() or None
             # If operator provided a LeechAgent path, also copy the TLS artifacts next to it.
             # This makes the Windows side simpler (LeechAgent typically expects server.p12 + client_ca.pem near the exe).
             if args.leechagent_path:
@@ -367,10 +370,13 @@ def main() -> int:
         if not la_args:
             try:
                 la_dir = os.path.dirname(args.leechagent_path)
-                meta_path = os.path.join(la_dir, "leechagent_tls.json")
-                p12_password = ""
-                if os.path.exists(meta_path):
-                    p12_password = (json.loads(Path(meta_path).read_text(encoding="utf-8")).get("p12_password") or "").strip()
+                p12_password = leech_p12_password
+                if not p12_password:
+                    # Fallback: read from json file if present
+                    meta_path = os.path.join(la_dir, "leechagent_tls.json")
+                    if os.path.exists(meta_path):
+                        with open(meta_path, "r", encoding="utf-8") as f:
+                            p12_password = (json.load(f).get("p12_password") or "").strip() or None
                 if p12_password:
                     la_args = [
                         "-interactive",

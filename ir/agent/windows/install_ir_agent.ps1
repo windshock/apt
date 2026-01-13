@@ -132,10 +132,7 @@ try {
     $LeechAgentPath = $laExe
   }
   # Ensure agent starts LeechAgent from its own folder so DLLs are found.
-  if (-not $env:IR_LEECHAGENT_CWD -or $env:IR_LEECHAGENT_CWD.Trim().Length -eq 0) {
-    # store in variable later written to agent.env
-    $LeechAgentCwd = $laDir
-  }
+  $LeechAgentCwd = $laDir
 } catch {
   Write-Host "WARN: leechagent.zip not downloaded (optional): $bootstrap/bootstrap/windows/leechagent.zip"
 }

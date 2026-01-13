@@ -93,6 +93,25 @@ You can keep developing server-side logic without Windows, but you will need a W
 - **MemProcFS remote memory access** succeeds (worker can read memory through LeechAgent)
 - **Real dump generation** (process dump / full dump) and upload to evidence storage
 
+### Windows endpoint PoC checklist (what you must do on the PC)
+
+On the Windows PC/VM (isolated endpoint):
+
+- **Time sync**: ensure NTP/time is correct (mTLS will fail if the clock is skewed).
+- **Network allow** (while still “isolated” from the internet):
+  - Endpoint → DFIR Orchestrator/Gateway: `443/tcp` (and `8443/tcp` for enrollment if used)
+  - DFIR Worker (server) → Endpoint LeechAgent: `28474/tcp`
+- **Prepare IR Agent runtime**:
+  - PoC option: install Python 3.11+ and required deps (`requests`, `cryptography`).
+  - Deploy helper scripts from this repo:
+    - `ir/agent/windows/install_ir_agent.ps1`
+    - `ir/agent/windows/run_ir_agent.ps1`
+- **(Optional) Prepare LeechAgent**:
+  - Place `leechagent.exe` (and required DLLs) on the endpoint.
+  - Configure IR Agent to start it on isolation (`IR_LEECHAGENT_PATH`, `IR_LEECHAGENT_ARGS`).
+  - The agent can also fetch gRPC TLS artifacts (`server.p12` + `client_ca.pem`) via orchestrator:
+    - enable `IR_FETCH_LEECHAGENT_TLS=1` (default in the Windows installer script)
+
 #### Expected placement (PoC)
 
 - Put MemProcFS binaries inside the DFIR server and mount into worker container at:

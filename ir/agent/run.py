@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import socket
+import subprocess
 import sys
 import time
 from typing import Any
@@ -80,6 +82,64 @@ def post_json(*, orch_url: str, key: str, require_sig: bool, path: str, payload:
     if cert_file and key_file:
         cert = (cert_file, key_file)
     return requests.post(url, data=body, headers=headers, timeout=10, verify=verify or True, cert=cert)
+
+
+def fetch_leechagent_grpc_tls(
+    *,
+    orch_url: str,
+    key: str,
+    require_sig: bool,
+    agent_id: str,
+    hostname: str,
+    out_dir: str,
+    ip: str | None = None,
+) -> dict[str, str]:
+    """
+    Fetch LeechAgent gRPC TLS artifacts from orchestrator and write them to out_dir:
+    - server.p12
+    - client_ca.pem
+    - leechagent_tls.json (metadata: p12_password, host/ip)
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    path = f"/v1/leechagent/{agent_id}/grpc-tls"
+    payload = {"host": hostname, "ip": ip}
+    r = post_json(orch_url=orch_url, key=key, require_sig=require_sig, path=path, payload=payload)
+    if r.status_code >= 300:
+        raise RuntimeError(f"leechagent_tls failed: {r.status_code} {r.text}")
+    obj = r.json()
+
+    p12_b64 = obj.get("server_p12_b64") or ""
+    client_ca_pem = obj.get("client_ca_pem") or ""
+    p12_password = obj.get("p12_password") or ""
+    if not p12_b64 or not client_ca_pem or not p12_password:
+        raise RuntimeError("leechagent_tls invalid response (missing p12/ca/password)")
+
+    server_p12 = base64.b64decode(p12_b64.encode("ascii"))
+    p12_path = os.path.join(out_dir, "server.p12")
+    ca_path = os.path.join(out_dir, "client_ca.pem")
+    meta_path = os.path.join(out_dir, "leechagent_tls.json")
+    with open(p12_path, "wb") as f:
+        f.write(server_p12)
+    with open(ca_path, "w", encoding="utf-8") as f:
+        f.write(client_ca_pem)
+    with open(meta_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"host": obj.get("host"), "ip": obj.get("ip"), "p12_password": p12_password}, ensure_ascii=False, indent=2) + "\n")
+    return {"server_p12": p12_path, "client_ca": ca_path, "meta": meta_path}
+
+
+def maybe_start_leechagent(*, path: str, args: list[str], cwd: str | None) -> subprocess.Popen | None:
+    """
+    Best-effort spawn of Windows LeechAgent process.
+    Operator controls args/cwd.
+    """
+    if not path:
+        return None
+    try:
+        cmd = [path] + list(args or [])
+        return subprocess.Popen(cmd, cwd=cwd or None)
+    except Exception as e:
+        print(f"leechagent start failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return None
 
 
 def ensure_mtls_cert(
@@ -173,6 +233,11 @@ def main() -> int:
     ap.add_argument("--startup-wait-seconds", type=int, default=30)
     ap.add_argument("--enroll-mtls", action="store_true", default=os.getenv("IR_ENROLL_MTLS", "0") == "1")
     ap.add_argument("--mtls-out", default=os.getenv("IR_MTLS_DIR", "/data/ir/mtls"))
+    ap.add_argument("--fetch-leechagent-tls", action="store_true", default=os.getenv("IR_FETCH_LEECHAGENT_TLS", "0") == "1")
+    ap.add_argument("--leechagent-tls-out", default=os.getenv("IR_LEECHAGENT_TLS_OUT", ""))
+    ap.add_argument("--leechagent-path", default=os.getenv("IR_LEECHAGENT_PATH", ""))
+    ap.add_argument("--leechagent-args", default=os.getenv("IR_LEECHAGENT_ARGS", ""))
+    ap.add_argument("--leechagent-cwd", default=os.getenv("IR_LEECHAGENT_CWD", ""))
     args = ap.parse_args()
 
     deadline = time.time() + max(1, args.startup_wait_seconds)
@@ -213,6 +278,23 @@ def main() -> int:
             return 5
 
     payload = {"agent_id": args.agent_id, "hostname": args.hostname, "ip": None, "capabilities": {}}
+
+    if args.fetch_leechagent_tls:
+        out_dir = args.leechagent_tls_out or os.path.join(args.mtls_out, args.agent_id, "leechagent_tls")
+        try:
+            _ = fetch_leechagent_grpc_tls(
+                orch_url=args.orch_url,
+                key=args.shared_key,
+                require_sig=bool(args.require_signature),
+                agent_id=args.agent_id,
+                hostname=args.hostname,
+                ip=None,
+                out_dir=out_dir,
+            )
+        except Exception as e:
+            print(f"fetch leechagent tls failed: {type(e).__name__}: {e}", file=sys.stderr)
+            return 6
+
     r = post_json(
         orch_url=args.orch_url,
         key=args.shared_key,
@@ -224,10 +306,22 @@ def main() -> int:
         print(r.text, file=sys.stderr)
         return 3
 
+    leech_proc: subprocess.Popen | None = None
+    if args.leechagent_path:
+        la_args = [a for a in (args.leechagent_args or "").split() if a.strip()]
+        leech_proc = maybe_start_leechagent(path=args.leechagent_path, args=la_args, cwd=(args.leechagent_cwd or None))
+
     # In real agent: start LeechAgent here and wait for work order / keep-alive.
     # MVP: just periodic heartbeat (re-join is an upsert).
     while True:
         time.sleep(args.poll_seconds)
+        if leech_proc is not None:
+            try:
+                if leech_proc.poll() is not None:
+                    print("leechagent exited; stopping agent loop", file=sys.stderr)
+                    return 7
+            except Exception:
+                pass
         r = post_json(
             orch_url=args.orch_url,
             key=args.shared_key,

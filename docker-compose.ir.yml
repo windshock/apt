@@ -44,6 +44,9 @@ services:
       - apt_data:/data
     environment:
       - IR_SHARED_KEY=dev
+      - IR_UI_ENABLED=1
+      - IR_UI_USER=ir
+      - IR_UI_PASSWORD=ir
       - IR_DATA_DIR=/data/ir
       - IR_DB_PATH=/data/ir/orchestrator.db
       - IR_EVIDENCE_DIR=/data/ir/evidence

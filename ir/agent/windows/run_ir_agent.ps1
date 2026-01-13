@@ -24,6 +24,13 @@ function Load-EnvFile($Path) {
 
 Load-EnvFile (Join-Path $InstallDir "agent.env")
 
+$pyRoot = $env:IR_AGENT_PY_DIR
+if (-not $pyRoot -or $pyRoot.Trim().Length -eq 0) { $pyRoot = (Join-Path $InstallDir "py") }
+if (Test-Path $pyRoot) {
+  # Ensure the locally extracted `ir/` package is importable.
+  [System.Environment]::SetEnvironmentVariable("PYTHONPATH", $pyRoot, "Process")
+}
+
 $args = @(
   "-m", "ir.agent.run",
   "--agent-id", $env:IR_AGENT_ID,

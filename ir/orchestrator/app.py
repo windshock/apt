@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import io
 import json
 import uuid
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 
 from ir.common.models import (
     AgentJoinRequest,
@@ -301,6 +303,35 @@ def create_app() -> FastAPI:
             "  GET /bootstrap/windows/uninstall_schtask.ps1\n"
         )
         return PlainTextResponse(content=txt, media_type="text/plain; charset=utf-8")
+
+    @app.get("/bootstrap/windows/ir_agent.zip")
+    async def bootstrap_windows_ir_agent_zip():
+        """
+        Minimal Python package payload for running the agent on Windows without cloning the repo.
+        The Windows scripts will download/extract this and set PYTHONPATH accordingly.
+        """
+        repo = _repo_root()
+        rels = [
+            "ir/__init__.py",
+            "ir/agent/__init__.py",
+            "ir/agent/run.py",
+            "ir/common/__init__.py",
+            "ir/common/signing.py",
+            "ir/common/models.py",
+        ]
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for rel in rels:
+                p = (repo / rel).resolve()
+                if not p.exists():
+                    raise HTTPException(status_code=500, detail=f"bootstrap missing: {rel}")
+                zf.writestr(rel, p.read_bytes())
+        data = buf.getvalue()
+        return Response(
+            content=data,
+            media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="ir_agent.zip"'},
+        )
 
     @app.post("/v1/pki/enroll")
     async def enroll_client_cert(request: Request, _key: str = Depends(_auth_dep)):

@@ -99,6 +99,18 @@ try {
   Write-Host "      error: $($_.Exception.Message)"
 }
 
+# Download minimal python package payload (ir_agent.zip) so python can import `ir.agent.run` without a repo clone.
+try {
+  $pyDir = Join-Path $InstallDir "py"
+  New-Item -ItemType Directory -Force -Path $pyDir | Out-Null
+  $zipOut = Join-Path $InstallDir "ir_agent.zip"
+  Invoke-WebRequest -UseBasicParsing -Uri "$bootstrap/bootstrap/windows/ir_agent.zip" -OutFile $zipOut | Out-Null
+  Expand-Archive -Path $zipOut -DestinationPath $pyDir -Force
+} catch {
+  Write-Host "WARN: failed to download/extract ir_agent.zip from $bootstrap/bootstrap/windows/ir_agent.zip"
+  Write-Host "      error: $($_.Exception.Message)"
+}
+
 # Write runtime env for the agent
 $envFile = Join-Path $InstallDir "agent.env"
 $enrollMtlsVal = "0"
@@ -112,6 +124,7 @@ IR_ORCH_URL=$OrchUrl
 IR_ENROLL_URL=$EnrollUrl
 IR_SHARED_KEY=$SharedKey
 IR_TLS_CA=$TlsCaPath
+IR_AGENT_PY_DIR=$InstallDir\py
 IR_ENROLL_MTLS=$enrollMtlsVal
 IR_FETCH_LEECHAGENT_TLS=$fetchLeechVal
 IR_MTLS_DIR=$InstallDir\mtls

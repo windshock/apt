@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ir-gateway-nginx
+  namespace: ir
+data:
+  nginx.conf: |
+    events {}
+    http {
+      server_tokens off;
+      resolver 127.0.0.11 ipv6=off valid=10s;
+
+      upstream orchestrator {
+        zone orchestrator 64k;
+        server ir-orchestrator:8080 resolve;
+      }
+
+      server {
+        listen 443 ssl;
+
+        ssl_certificate     /etc/nginx/pki/server.crt.pem;
+        ssl_certificate_key /etc/nginx/pki/server.key.pem;
+
+        ssl_client_certificate /etc/nginx/pki/ca.crt.pem;
+        ssl_verify_client on;
+        ssl_verify_depth 2;
+
+        location / {
+          proxy_pass http://orchestrator;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_http_version 1.1;
+        }
+      }
+
+      server {
+        listen 8443 ssl;
+
+        ssl_certificate     /etc/nginx/pki/server.crt.pem;
+        ssl_certificate_key /etc/nginx/pki/server.key.pem;
+
+        ssl_verify_client off;
+
+        location = /v1/pki/enroll {
+          proxy_pass http://orchestrator;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location = /v1/pki/ca.crt.pem {
+          proxy_pass http://orchestrator;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location = /healthz {
+          proxy_pass http://orchestrator;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location / {
+          return 404;
+        }
+      }
+    }
+

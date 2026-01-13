@@ -1,3 +1,36 @@
+.git
+.github
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# big artifacts / corpora
+archive/
+download/
+unzip/
+ha_dumps/
+ha_dumps_unz/
+archiveis/
+thor-lite/
+tools/
+_yaraify/
+
+# local secrets / configs
+.env
+.env.*
+robot$*.json
+*.pem
+*.p12
+*.key
+*.crt
+skplanet.com/
+skplanet.com.zip
+
+# build outputs
+dist/
+build/
+
 venv/
 download/
 unzip/

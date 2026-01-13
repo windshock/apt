@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ir-orchestrator
+  namespace: ir
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ir-orchestrator
+  template:
+    metadata:
+      labels:
+        app: ir-orchestrator
+    spec:
+      containers:
+        - name: orchestrator
+          image: dev.pcr.kr/dfir/apt-ir:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: IR_DATA_DIR
+              value: /data/ir
+            - name: IR_DB_PATH
+              value: /data/ir/orchestrator.db
+            - name: IR_EVIDENCE_DIR
+              value: /data/ir/evidence
+            - name: IR_PKI_DIR
+              value: /data/ir/pki
+            - name: IR_UI_ENABLED
+              value: "1"
+            - name: IR_SHARED_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ir-secrets
+                  key: IR_SHARED_KEY
+            - name: IR_UI_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ir-secrets
+                  key: IR_UI_USER
+            - name: IR_UI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ir-secrets
+                  key: IR_UI_PASSWORD
+          command: ["bash","-lc"]
+          args:
+            - |
+              python3 -m uvicorn ir.orchestrator.app:app --host 0.0.0.0 --port 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ir-data
+

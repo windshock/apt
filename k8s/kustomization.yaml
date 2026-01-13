@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ir
+
+resources:
+  - namespace.yaml
+  - secret-ir.yaml
+  - pvc-ir.yaml
+  - job-ir-init.yaml
+  - deploy-ir-orchestrator.yaml
+  - svc-ir-orchestrator.yaml
+  - svc-ir-orchestrator-ui.yaml
+  - cm-ir-gateway.yaml
+  - deploy-ir-gateway.yaml
+  - svc-ir-gateway.yaml
+
+images:
+  - name: dev.pcr.kr/dfir/apt-ir
+    newName: dev.pcr.kr/dfir/apt-ir
+    newTag: latest
+

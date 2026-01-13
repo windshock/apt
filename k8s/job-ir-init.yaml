@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ir-init
+  namespace: ir
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: dev.pcr.kr/dfir/apt-ir:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: IR_DATA_DIR
+              value: /data/ir
+            - name: IR_PKI_DIR
+              value: /data/ir/pki
+          command: ["bash","-lc"]
+          args:
+            - |
+              set -euo pipefail
+              mkdir -p /data/ir /data/ir/pki
+              python3 /work/ir/scripts/bootstrap_pki.py --pki-dir /data/ir/pki --hosts 'dfir.skplanet.com,localhost,ir-gateway'
+              python3 /work/scripts/yaraify_buckets_from_md.py --in /work/yaraify_rules_classification.md --out /data/ir/yarahub_buckets.json
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ir-data
+

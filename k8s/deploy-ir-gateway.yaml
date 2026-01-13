@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ir-gateway
+  namespace: ir
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ir-gateway
+  template:
+    metadata:
+      labels:
+        app: ir-gateway
+    spec:
+      initContainers:
+        - name: wait-pki
+          image: busybox:1.36
+          command: ["sh","-lc"]
+          args:
+            - |
+              set -e
+              for i in $(seq 1 240); do
+                test -s /data/ir/pki/ca.crt.pem && test -s /data/ir/pki/server.crt.pem && test -s /data/ir/pki/server.key.pem && exit 0
+                sleep 1
+              done
+              echo "PKI not ready" >&2
+              exit 1
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 443
+            - containerPort: 8443
+          command: ["sh","-lc"]
+          args:
+            - |
+              mkdir -p /etc/nginx/pki
+              cp /data/ir/pki/ca.crt.pem /etc/nginx/pki/ca.crt.pem
+              cp /data/ir/pki/server.crt.pem /etc/nginx/pki/server.crt.pem
+              cp /data/ir/pki/server.key.pem /etc/nginx/pki/server.key.pem
+              exec nginx -g 'daemon off;'
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ir-data
+        - name: nginx-conf
+          configMap:
+            name: ir-gateway-nginx
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+

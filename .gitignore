@@ -46,4 +46,7 @@ build/
 dist/
 *.spec
 
+# Harbor robot tokens / secrets (do not commit)
+robot$*.json
+
 

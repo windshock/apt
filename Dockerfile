@@ -16,7 +16,8 @@ WORKDIR /work
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# copy only small helpers into image; repo itself is mounted read-only by compose
-COPY env_utils.py /work/env_utils.py
+# K8s-friendly: bake required repo code into the image.
+# Compose can still mount /work read-only, but K8s needs the code inside the image.
+COPY . /work
 
 

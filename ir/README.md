@@ -144,6 +144,20 @@ To remove the task:
 .\uninstall_schtask.ps1 -TaskName "IRAgent"
 ```
 
+### Windows: build a standalone EXE (recommended for PoC/rollout)
+
+You cannot cross-compile a Windows EXE from Linux/macOS. Build on a Windows machine/VM:
+
+```powershell
+# From the repo checkout:
+.\ir\agent\windows\build_ir_agent_exe.ps1
+
+# Result:
+#   .\dist\ir-agent.exe
+```
+
+Then deploy `ir-agent.exe` to the endpoint and run it with the same flags (or via the Scheduled Task wrapper).
+
 #### Expected placement (PoC)
 
 - Put MemProcFS binaries inside the DFIR server and mount into worker container at:

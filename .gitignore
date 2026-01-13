@@ -41,4 +41,9 @@ skplanet.com.zip
 # vendored source checkouts (keep out of git; use scripts/docs to fetch)
 vendor/
 
+# PyInstaller build outputs (Windows EXE packaging)
+build/
+dist/
+*.spec
+
 

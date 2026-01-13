@@ -170,18 +170,17 @@ def ensure_mtls_cert(
     key_path = os.path.join(out_dir, "client.key.pem")
     cert_path = os.path.join(out_dir, "client.crt.pem")
     ca_path = os.path.join(out_dir, "ca.crt.pem")
-    # If IR_TLS_CA is already set (e.g., to a public/enterprise CA bundle for gateway TLS),
-    # do not override it during enrollment. The CA returned by enrollment is the internal CA
-    # used to *issue client certs*, not necessarily the CA used to verify the gateway's
-    # server certificate.
-    existing_verify_ca = os.getenv("IR_TLS_CA")
+    # IMPORTANT:
+    # - IR_TLS_CA is used to verify the *gateway/orchestrator server TLS certificate*.
+    # - The CA returned by enrollment is the internal CA used to *issue client certs* (for mTLS),
+    #   and MUST NOT be forced into IR_TLS_CA, otherwise we break TLS verification when the
+    #   gateway uses a public/enterprise cert (e.g., GlobalSign wildcard).
+    # Therefore: never mutate IR_TLS_CA here.
 
     if os.path.exists(key_path) and os.path.exists(cert_path) and os.path.exists(ca_path):
         # Ensure current process uses existing material.
         os.environ["IR_TLS_CERT"] = cert_path
         os.environ["IR_TLS_KEY"] = key_path
-        if not existing_verify_ca:
-            os.environ["IR_TLS_CA"] = ca_path
         return {"key": key_path, "cert": cert_path, "ca": ca_path}
 
     key = ec.generate_private_key(ec.SECP256R1())
@@ -222,8 +221,6 @@ def ensure_mtls_cert(
     # Export paths for subsequent API calls in this process.
     os.environ["IR_TLS_CERT"] = cert_path
     os.environ["IR_TLS_KEY"] = key_path
-    if not existing_verify_ca:
-        os.environ["IR_TLS_CA"] = ca_path
 
     return {"key": key_path, "cert": cert_path, "ca": ca_path}
 

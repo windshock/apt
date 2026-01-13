@@ -131,6 +131,11 @@ try {
   if ((-not $LeechAgentPath -or $LeechAgentPath.Trim().Length -eq 0) -and (Test-Path $laExe)) {
     $LeechAgentPath = $laExe
   }
+  # Ensure agent starts LeechAgent from its own folder so DLLs are found.
+  if (-not $env:IR_LEECHAGENT_CWD -or $env:IR_LEECHAGENT_CWD.Trim().Length -eq 0) {
+    # store in variable later written to agent.env
+    $LeechAgentCwd = $laDir
+  }
 } catch {
   Write-Host "WARN: leechagent.zip not downloaded (optional): $bootstrap/bootstrap/windows/leechagent.zip"
 }
@@ -155,6 +160,7 @@ IR_MTLS_DIR=$InstallDir\mtls
 IR_INTERNET_PROBE=$InternetProbe
 IR_LEECHAGENT_PATH=$LeechAgentPath
 IR_LEECHAGENT_ARGS=$LeechAgentArgs
+IR_LEECHAGENT_CWD=$LeechAgentCwd
 "@ | Set-Content -Encoding ASCII -Path $envFile
 
 # Firewall: allow inbound gRPC 28474 (from DFIR server if provided)

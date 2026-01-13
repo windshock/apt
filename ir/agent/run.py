@@ -155,7 +155,7 @@ def fetch_leechagent_grpc_tls(
         f.write(client_ca_pem)
     with open(meta_path, "w", encoding="utf-8") as f:
         f.write(json.dumps({"host": obj.get("host"), "ip": obj.get("ip"), "p12_password": p12_password}, ensure_ascii=False, indent=2) + "\n")
-    return {"server_p12": p12_path, "client_ca": ca_path, "meta": meta_path}
+    return {"server_p12": p12_path, "client_ca": ca_path, "meta": meta_path, "p12_password": p12_password}
 
 
 def maybe_start_leechagent(*, path: str, args: list[str], cwd: str | None) -> subprocess.Popen | None:
@@ -341,6 +341,7 @@ def main() -> int:
                     if la_dir:
                         shutil.copyfile(files["server_p12"], os.path.join(la_dir, "server.p12"))
                         shutil.copyfile(files["client_ca"], os.path.join(la_dir, "client_ca.pem"))
+                        shutil.copyfile(files["meta"], os.path.join(la_dir, "leechagent_tls.json"))
                 except Exception:
                     pass
         except Exception as e:
@@ -361,6 +362,28 @@ def main() -> int:
     leech_proc: subprocess.Popen | None = None
     if args.leechagent_path:
         la_args = [a for a in (args.leechagent_args or "").split() if a.strip()]
+        # Auto-fill gRPC mTLS args when none provided (common on Windows).
+        # LeechAgent requires: -grpc -grpc-tls-p12 -grpc-tls-p12-password -grpc-client-ca
+        if not la_args:
+            try:
+                la_dir = os.path.dirname(args.leechagent_path)
+                meta_path = os.path.join(la_dir, "leechagent_tls.json")
+                p12_password = ""
+                if os.path.exists(meta_path):
+                    p12_password = (json.loads(Path(meta_path).read_text(encoding="utf-8")).get("p12_password") or "").strip()
+                if p12_password:
+                    la_args = [
+                        "-interactive",
+                        "-grpc",
+                        "-grpc-tls-p12",
+                        os.path.join(la_dir, "server.p12"),
+                        "-grpc-tls-p12-password",
+                        p12_password,
+                        "-grpc-client-ca",
+                        os.path.join(la_dir, "client_ca.pem"),
+                    ]
+            except Exception:
+                pass
         leech_proc = maybe_start_leechagent(path=args.leechagent_path, args=la_args, cwd=(args.leechagent_cwd or None))
 
     # Scheduled-task friendly mode: do not stay resident.

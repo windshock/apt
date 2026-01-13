@@ -224,6 +224,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="IR Agent (MVP stub): check isolation and join orchestrator.")
     ap.add_argument("--agent-id", default=os.getenv("IR_AGENT_ID", socket.gethostname()))
     ap.add_argument("--hostname", default=os.getenv("IR_AGENT_HOSTNAME", socket.gethostname()))
+    ap.add_argument(
+        "--ip",
+        default=os.getenv("IR_AGENT_IP", ""),
+        help="Optional endpoint IP to report to orchestrator (recommended behind gateways/LBs).",
+    )
     ap.add_argument("--orch-url", default=os.getenv("IR_ORCH_URL", "http://ir-orchestrator:8080"))
     ap.add_argument("--shared-key", default=os.getenv("IR_SHARED_KEY", "dev"))
     ap.add_argument("--require-signature", action="store_true", default=os.getenv("IR_REQUIRE_SIGNATURE", "0") == "1")
@@ -283,7 +288,8 @@ def main() -> int:
             print(f"mtls enroll failed: {type(e).__name__}: {e}", file=sys.stderr)
             return 5
 
-    payload = {"agent_id": args.agent_id, "hostname": args.hostname, "ip": None, "capabilities": {}}
+    ip_val = (args.ip or "").strip() or None
+    payload = {"agent_id": args.agent_id, "hostname": args.hostname, "ip": ip_val, "capabilities": {}}
 
     if args.fetch_leechagent_tls:
         out_dir = args.leechagent_tls_out or os.path.join(args.mtls_out, args.agent_id, "leechagent_tls")

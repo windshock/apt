@@ -316,7 +316,9 @@ def create_app() -> FastAPI:
     @app.post("/v1/agents/join", response_model=AgentJoinResponse)
     async def agent_join(payload: AgentJoinRequest, request: Request, _key: str = Depends(_auth_dep)):
         client_ip = request.client.host if request.client else None
-        ip = payload.ip or client_ip
+        # When behind a proxy/gateway, prefer X-Forwarded-For if present.
+        xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        ip = payload.ip or xff or client_ip
         db.upsert_agent(
             agent_id=payload.agent_id,
             hostname=payload.hostname,

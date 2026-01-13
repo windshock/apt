@@ -4,6 +4,8 @@ Param(
   [Parameter(Mandatory=$true)][string]$EnrollUrl, # e.g. https://dfir.skplanet.com:8443
   [Parameter(Mandatory=$true)][string]$SharedKey,
   [Parameter(Mandatory=$false)][string]$AgentId = $env:COMPUTERNAME,
+  [Parameter(Mandatory=$false)][string]$AgentIp = "",
+  [Parameter(Mandatory=$false)][string]$TlsCaPath = "",
   [Parameter(Mandatory=$false)][string]$InternetProbe = "https://example.com",
   [Parameter(Mandatory=$false)][int]$PollSeconds = 30,
   [Parameter(Mandatory=$false)][int]$StartupWaitSeconds = 30,
@@ -23,9 +25,11 @@ New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir "mtls") | Out-N
 $envFile = Join-Path $InstallDir "agent.env"
 @"
 IR_AGENT_ID=$AgentId
+IR_AGENT_IP=$AgentIp
 IR_ORCH_URL=$OrchUrl
 IR_ENROLL_URL=$EnrollUrl
 IR_SHARED_KEY=$SharedKey
+IR_TLS_CA=$TlsCaPath
 IR_ENROLL_MTLS=1
 IR_FETCH_LEECHAGENT_TLS=1
 IR_MTLS_DIR=$InstallDir\mtls

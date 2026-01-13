@@ -8,6 +8,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: harbor-regcred
       containers:
         - name: init
           image: dev.pcr.kr/dfir/apt-ir:latest

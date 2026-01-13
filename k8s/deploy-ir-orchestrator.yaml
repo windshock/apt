@@ -13,6 +13,8 @@ spec:
       labels:
         app: ir-orchestrator
     spec:
+      imagePullSecrets:
+        - name: harbor-regcred
       containers:
         - name: orchestrator
           image: dev.pcr.kr/dfir/apt-ir:latest

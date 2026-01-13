@@ -29,6 +29,18 @@ docker build -t "${IMAGE_REPO}:${IMAGE_TAG}" .
 docker push "${IMAGE_REPO}:${IMAGE_TAG}"
 ```
 
+### Create imagePullSecret (Harbor)
+
+Create a pull secret in the `ir` namespace so Pods can pull from Harbor:
+
+```bash
+kubectl -n ir create secret docker-registry harbor-regcred \
+  --docker-server=dev.pcr.kr \
+  --docker-username='robot$...+dfir' \
+  --docker-password='<robot-secret>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
 ### Deploy (kubectl)
 
 Edit `k8s/kustomization.yaml` to set the image repo/tag, then:

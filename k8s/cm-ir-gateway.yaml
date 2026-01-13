@@ -8,11 +8,11 @@ data:
     events {}
     http {
       server_tokens off;
-      resolver 127.0.0.11 ipv6=off valid=10s;
 
       upstream orchestrator {
         zone orchestrator 64k;
-        server ir-orchestrator:8080 resolve;
+        # Kubernetes: rely on the cluster DNS at Nginx startup (service VIP is stable).
+        server ir-orchestrator:8080;
       }
 
       server {

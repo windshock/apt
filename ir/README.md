@@ -137,8 +137,8 @@ Invoke-WebRequest -UseBasicParsing -Uri "https://dfir.skplanet.com:8443/bootstra
 
 ```powershell
 .\install_ir_agent.ps1 -InstallDir "C:\ProgramData\IRAgent" `
-  -OrchUrl "https://dfir.skplanet.com:443" `
-  -EnrollUrl "https://dfir.skplanet.com:8443" `
+  -OrchUrl "https://dfir.skplanet.com:30443" `
+  -EnrollUrl "https://dfir.skplanet.com:30444" `
   -SharedKey "dev"
 ```
 

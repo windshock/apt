@@ -1,8 +1,10 @@
 Param(
   [Parameter(Mandatory=$false)][string]$InstallDir = "C:\ProgramData\IRAgent",
-  # Orchestrator API URL (mTLS port). In production behind gateway: https://dfir.skplanet.com:443
+  # Orchestrator API URL (mTLS port).
+  # NOTE: In Kubernetes NodePort PoC, this is typically https://dfir.skplanet.com:30443
   [Parameter(Mandatory=$false)][string]$OrchUrl = "https://dfir.skplanet.com:443",
-  # Enrollment/bootstrap URL (no client cert). In production behind gateway: https://dfir.skplanet.com:8443
+  # Enrollment/bootstrap URL (no client cert).
+  # NOTE: In Kubernetes NodePort PoC, this is typically https://dfir.skplanet.com:30444
   [Parameter(Mandatory=$false)][string]$EnrollUrl = "https://dfir.skplanet.com:8443",
   # Where to download bootstrap assets (CA + scripts). Default: EnrollUrl.
   [Parameter(Mandatory=$false)][string]$BootstrapUrl = "",
@@ -22,12 +24,56 @@ Param(
 
 $ErrorActionPreference = "Stop"
 
+function Use-Tls12 {
+  # Windows PowerShell 5.1 can default to older TLS. Force TLS1.2 for HTTPS downloads.
+  try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  } catch {}
+}
+
+function Test-GetOk([string]$Url) {
+  try {
+    $r = Invoke-WebRequest -UseBasicParsing -Uri $Url -Method GET -TimeoutSec 5
+    return ($r.StatusCode -ge 200 -and $r.StatusCode -lt 300)
+  } catch {
+    return $false
+  }
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir "mtls") | Out-Null
+
+Use-Tls12
 
 $bootstrap = $BootstrapUrl
 if (-not $bootstrap -or $bootstrap.Trim().Length -eq 0) { $bootstrap = $EnrollUrl }
 $bootstrap = $bootstrap.TrimEnd("/")
+
+# Auto-detect Kubernetes NodePort environment:
+# If the default ports (443/8443) don't respond for /bootstrap/*, fall back to 30443/30444.
+try {
+  $bUri = [Uri]$bootstrap
+  $bootstrapOk = Test-GetOk "$bootstrap/bootstrap/windows/README.txt"
+  if (-not $bootstrapOk) {
+    if ($bUri.Port -eq 8443 -or $bUri.Port -eq 443) {
+      $altBootstrap = "{0}://{1}:30444" -f $bUri.Scheme, $bUri.Host
+      if (Test-GetOk "$altBootstrap/bootstrap/windows/README.txt") {
+        $bootstrap = $altBootstrap
+        $EnrollUrl = $altBootstrap
+        try {
+          $oUri = [Uri]$OrchUrl
+          if ($oUri.Port -eq 443) {
+            $OrchUrl = "{0}://{1}:30443" -f $oUri.Scheme, $oUri.Host
+          }
+        } catch {}
+        Write-Host "Detected NodePort bootstrap; using:"
+        Write-Host "  OrchUrl  = $OrchUrl"
+        Write-Host "  EnrollUrl= $EnrollUrl"
+        Write-Host "  Bootstrap= $bootstrap"
+      }
+    }
+  }
+} catch {}
 
 # Download CA (for gateway TLS) if not provided.
 # Note: if your dfir.skplanet.com TLS cert is publicly trusted, you can leave $TlsCaPath empty.

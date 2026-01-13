@@ -75,19 +75,14 @@ try {
   }
 } catch {}
 
-# Download CA (for gateway TLS) if not provided.
-# Note: if your dfir.skplanet.com TLS cert is publicly trusted, you can leave $TlsCaPath empty.
-if (-not $TlsCaPath -or $TlsCaPath.Trim().Length -eq 0) {
-  $caOut = Join-Path $InstallDir "mtls\gateway-ca.crt.pem"
-  try {
-    Invoke-WebRequest -UseBasicParsing -Uri "$bootstrap/bootstrap/ca.crt.pem" -OutFile $caOut | Out-Null
-    $TlsCaPath = $caOut
-  } catch {
-    Write-Host "WARN: failed to download CA from $bootstrap/bootstrap/ca.crt.pem"
-    Write-Host "      error: $($_.Exception.Message)"
-    Write-Host "      You may need to provide -TlsCaPath (or install your enterprise/public TLS cert)."
-  }
-}
+# NOTE about IR_TLS_CA:
+# - This should be used ONLY to verify the gateway/orchestrator *server TLS* certificate.
+# - If you are using a publicly trusted cert (e.g., GlobalSign wildcard), leave it empty.
+# - If you are using an internal/self-signed gateway cert, you must pre-install that CA on Windows
+#   (or pass -TlsCaPath to a CA bundle that can validate the gateway cert).
+#
+# We intentionally do NOT auto-download any "internal IR CA" here, because it is not the same CA as the
+# public wildcard cert and would break TLS verification (leading to "orchestrator unreachable").
 
 # Download helper scripts into InstallDir for easy Scheduled Task setup.
 try {

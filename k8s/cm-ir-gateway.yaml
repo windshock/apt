@@ -56,6 +56,14 @@ data:
           proxy_set_header X-Forwarded-Proto https;
         }
 
+        # Bootstrap assets (no client cert) - CA + Windows installer scripts.
+        location /bootstrap/ {
+          proxy_pass http://orchestrator;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+        }
+
         location = /healthz {
           proxy_pass http://orchestrator;
           proxy_set_header Host $host;

@@ -119,6 +119,22 @@ try {
   Write-Host "      error: $($_.Exception.Message)"
 }
 
+# Download LeechAgent bundle (optional) so the endpoint can expose gRPC 28474 when isolated.
+# This is served from the DFIR server and is NOT stored in git.
+try {
+  $laDir = Join-Path $InstallDir "leechagent"
+  New-Item -ItemType Directory -Force -Path $laDir | Out-Null
+  $laZip = Join-Path $InstallDir "leechagent.zip"
+  Invoke-WebRequest -UseBasicParsing -Uri "$bootstrap/bootstrap/windows/leechagent.zip" -OutFile $laZip | Out-Null
+  Expand-Archive -Path $laZip -DestinationPath $laDir -Force
+  $laExe = Join-Path $laDir "leechagent.exe"
+  if ((-not $LeechAgentPath -or $LeechAgentPath.Trim().Length -eq 0) -and (Test-Path $laExe)) {
+    $LeechAgentPath = $laExe
+  }
+} catch {
+  Write-Host "WARN: leechagent.zip not downloaded (optional): $bootstrap/bootstrap/windows/leechagent.zip"
+}
+
 # Write runtime env for the agent
 $envFile = Join-Path $InstallDir "agent.env"
 $enrollMtlsVal = "0"

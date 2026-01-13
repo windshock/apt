@@ -45,6 +45,16 @@ def _repo_root() -> Path:
 def _windows_bootstrap_dir() -> Path:
     return (_repo_root() / "ir" / "agent" / "windows").resolve()
 
+def _data_bootstrap_windows_dir(settings: Settings) -> Path:
+    """
+    Data bootstrap dir (NOT in git): place large/binary artifacts here (e.g. leechagent.zip).
+    Mounted via PVC in k8s so gateway can serve it through orchestrator.
+      /data/ir/bootstrap/windows/...
+    """
+    p = (settings.data_dir / "bootstrap" / "windows").resolve()
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
 
 def _default_work_order(*, settings: Settings, case_id: str, agent: dict | None) -> WorkOrder:
     """
@@ -85,6 +95,7 @@ def create_app() -> FastAPI:
     db = OrchestratorDB(settings.db_path)
     db.init()
     settings.evidence_dir.mkdir(parents=True, exist_ok=True)
+    data_bootstrap_windows = _data_bootstrap_windows_dir(settings)
     ca = SimpleCA(PKIPaths.under(settings.pki_dir))
     ca.ensure_ca()
     leech_tls = LeechAgentTLSIssuer(pki_dir=settings.pki_dir, out_dir=settings.leechagent_tls_dir)
@@ -332,6 +343,21 @@ def create_app() -> FastAPI:
             media_type="application/zip",
             headers={"Content-Disposition": 'attachment; filename="ir_agent.zip"'},
         )
+
+    @app.get("/bootstrap/windows/leechagent.zip")
+    async def bootstrap_windows_leechagent_zip():
+        """
+        Optional binary payload (NOT stored in git).
+        If you place a zip at: /data/ir/bootstrap/windows/leechagent.zip
+        the Windows installer can download it and extract leechagent.exe.
+        """
+        p = data_bootstrap_windows / "leechagent.zip"
+        if not p.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="leechagent.zip not present. Put it at /data/ir/bootstrap/windows/leechagent.zip (PVC) and retry.",
+            )
+        return FileResponse(path=str(p), media_type="application/zip", filename="leechagent.zip")
 
     @app.post("/v1/pki/enroll")
     async def enroll_client_cert(request: Request, _key: str = Depends(_auth_dep)):

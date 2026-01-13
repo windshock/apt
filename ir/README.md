@@ -108,7 +108,10 @@ On the Windows PC/VM (isolated endpoint):
     - `ir/agent/windows/install_ir_agent.ps1`
     - `ir/agent/windows/run_ir_agent.ps1`
 - **(Optional) Prepare LeechAgent**:
-  - Place `leechagent.exe` (and required DLLs) on the endpoint.
+  - Recommended: serve a `leechagent.zip` from the DFIR server so the Windows installer can download it.
+    - Put it on the shared PVC at: `/data/ir/bootstrap/windows/leechagent.zip`
+    - Then the installer will try: `GET /bootstrap/windows/leechagent.zip` and extract to `C:\ProgramData\IRAgent\leechagent\`
+  - Or manually place `leechagent.exe` (and required DLLs) on the endpoint.
   - Configure IR Agent to start it on isolation (`IR_LEECHAGENT_PATH`, `IR_LEECHAGENT_ARGS`).
   - The agent can also fetch gRPC TLS artifacts (`server.p12` + `client_ca.pem`) via orchestrator:
     - enable `IR_FETCH_LEECHAGENT_TLS=1` (default in the Windows installer script)

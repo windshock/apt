@@ -4,6 +4,7 @@ import argparse
 import base64
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -323,7 +324,7 @@ def main() -> int:
     if args.fetch_leechagent_tls:
         out_dir = args.leechagent_tls_out or os.path.join(args.mtls_out, args.agent_id, "leechagent_tls")
         try:
-            _ = fetch_leechagent_grpc_tls(
+            files = fetch_leechagent_grpc_tls(
                 orch_url=args.orch_url,
                 key=args.shared_key,
                 require_sig=bool(args.require_signature),
@@ -332,6 +333,16 @@ def main() -> int:
                 ip=None,
                 out_dir=out_dir,
             )
+            # If operator provided a LeechAgent path, also copy the TLS artifacts next to it.
+            # This makes the Windows side simpler (LeechAgent typically expects server.p12 + client_ca.pem near the exe).
+            if args.leechagent_path:
+                try:
+                    la_dir = os.path.dirname(args.leechagent_path)
+                    if la_dir:
+                        shutil.copyfile(files["server_p12"], os.path.join(la_dir, "server.p12"))
+                        shutil.copyfile(files["client_ca"], os.path.join(la_dir, "client_ca.pem"))
+                except Exception:
+                    pass
         except Exception as e:
             print(f"fetch leechagent tls failed: {type(e).__name__}: {e}", file=sys.stderr)
             return 6

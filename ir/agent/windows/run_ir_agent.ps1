@@ -2,7 +2,8 @@ Param(
   [Parameter(Mandatory=$false)][string]$InstallDir = "C:\ProgramData\IRAgent",
   [Parameter(Mandatory=$false)][int]$PollSeconds = 30,
   [Parameter(Mandatory=$false)][int]$StartupWaitSeconds = 30,
-  [Parameter(Mandatory=$false)][switch]$AssumeIsolated = $false
+  [Parameter(Mandatory=$false)][switch]$AssumeIsolated = $false,
+  [Parameter(Mandatory=$false)][switch]$RunOnce = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +37,7 @@ $args = @(
 )
 
 if ($AssumeIsolated) { $args += "--assume-isolated" }
+if ($RunOnce) { $args += "--run-once" }
 if ($env:IR_FETCH_LEECHAGENT_TLS -eq "1") { $args += "--fetch-leechagent-tls" }
 if ($env:IR_LEECHAGENT_PATH -and $env:IR_LEECHAGENT_PATH.Trim().Length -gt 0) {
   $args += @("--leechagent-path", $env:IR_LEECHAGENT_PATH)

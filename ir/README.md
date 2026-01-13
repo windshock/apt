@@ -112,6 +112,38 @@ On the Windows PC/VM (isolated endpoint):
   - The agent can also fetch gRPC TLS artifacts (`server.p12` + `client_ca.pem`) via orchestrator:
     - enable `IR_FETCH_LEECHAGENT_TLS=1` (default in the Windows installer script)
 
+### Windows: make the agent run automatically (Scheduled Task, run-once)
+
+For PoC, the simplest "always ready but low overhead" model is a Scheduled Task that runs the agent
+in **run-once** mode periodically + at startup/logon:
+
+1) Copy the repo's Windows scripts to the endpoint (or directly use them from a shared folder):
+- `ir/agent/windows/install_ir_agent.ps1`
+- `ir/agent/windows/run_ir_agent.ps1`
+- `ir/agent/windows/install_schtask.ps1`
+- `ir/agent/windows/uninstall_schtask.ps1`
+
+2) Install config + firewall rule:
+
+```powershell
+.\install_ir_agent.ps1 -InstallDir "C:\ProgramData\IRAgent" `
+  -OrchUrl "https://dfir.skplanet.com:443" `
+  -EnrollUrl "https://dfir.skplanet.com:8443" `
+  -SharedKey "dev"
+```
+
+3) Install Scheduled Task (runs as SYSTEM):
+
+```powershell
+.\install_schtask.ps1 -InstallDir "C:\ProgramData\IRAgent" -TaskName "IRAgent" -EveryMinutes 1
+```
+
+To remove the task:
+
+```powershell
+.\uninstall_schtask.ps1 -TaskName "IRAgent"
+```
+
 #### Expected placement (PoC)
 
 - Put MemProcFS binaries inside the DFIR server and mount into worker container at:

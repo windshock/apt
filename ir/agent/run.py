@@ -231,6 +231,12 @@ def main() -> int:
     ap.add_argument("--assume-isolated", action="store_true", help="Bypass isolation checks (demo/testing).")
     ap.add_argument("--poll-seconds", type=int, default=30)
     ap.add_argument("--startup-wait-seconds", type=int, default=30)
+    ap.add_argument(
+        "--run-once",
+        action="store_true",
+        default=os.getenv("IR_RUN_ONCE", "0") == "1",
+        help="Run a single join (and optional TLS fetch / LeechAgent start), then exit. Recommended for Scheduled Task.",
+    )
     ap.add_argument("--enroll-mtls", action="store_true", default=os.getenv("IR_ENROLL_MTLS", "0") == "1")
     ap.add_argument("--mtls-out", default=os.getenv("IR_MTLS_DIR", "/data/ir/mtls"))
     ap.add_argument("--fetch-leechagent-tls", action="store_true", default=os.getenv("IR_FETCH_LEECHAGENT_TLS", "0") == "1")
@@ -310,6 +316,11 @@ def main() -> int:
     if args.leechagent_path:
         la_args = [a for a in (args.leechagent_args or "").split() if a.strip()]
         leech_proc = maybe_start_leechagent(path=args.leechagent_path, args=la_args, cwd=(args.leechagent_cwd or None))
+
+    # Scheduled-task friendly mode: do not stay resident.
+    # Note: child process (LeechAgent) can keep running after we exit (desired for PoC).
+    if args.run_once:
+        return 0
 
     # In real agent: start LeechAgent here and wait for work order / keep-alive.
     # MVP: just periodic heartbeat (re-join is an upsert).

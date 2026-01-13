@@ -49,6 +49,27 @@ Edit `k8s/kustomization.yaml` to set the image repo/tag, then:
 kubectl apply -k k8s/
 ```
 
+### Use your own TLS certificate for `dfir.skplanet.com` (recommended)
+
+By default, the gateway uses an internally generated TLS cert (`/data/ir/pki/server.*.pem`).
+If you already have a valid cert+key (e.g. in your local `skplanet.com/` folder), create a TLS secret
+and the gateway will **automatically** prefer it.
+
+Create the secret (cert should include fullchain if you have intermediates):
+
+```bash
+kubectl -n ir create secret tls ir-gateway-tls \
+  --cert /path/to/fullchain.pem \
+  --key  /path/to/privkey.pem \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Then restart the gateway:
+
+```bash
+kubectl -n ir rollout restart deploy/ir-gateway
+```
+
 ### Storage (NAS / NFS)
 
 This PoC uses a shared RWX volume so `ir-init`, `ir-orchestrator`, and `ir-gateway` can share `/data/ir/*`.

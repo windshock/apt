@@ -21,7 +21,13 @@ spec:
             - |
               set -e
               for i in $(seq 1 240); do
-                test -s /data/ir/pki/ca.crt.pem && test -s /data/ir/pki/server.crt.pem && test -s /data/ir/pki/server.key.pem && exit 0
+                # Always require internal CA (used for client mTLS auth on :443)
+                test -s /data/ir/pki/ca.crt.pem || { sleep 1; continue; }
+                # Server TLS cert can come from either:
+                # - internal bootstrap PKI (/data/ir/pki/server.*) OR
+                # - an external TLS secret mounted at /tls (tls.crt/tls.key)
+                if test -s /tls/tls.crt && test -s /tls/tls.key; then exit 0; fi
+                if test -s /data/ir/pki/server.crt.pem && test -s /data/ir/pki/server.key.pem; then exit 0; fi
                 sleep 1
               done
               echo "PKI not ready" >&2
@@ -29,6 +35,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: gateway-tls
+              mountPath: /tls
       containers:
         - name: nginx
           image: nginx:1.27-alpine
@@ -40,8 +48,15 @@ spec:
             - |
               mkdir -p /etc/nginx/pki
               cp /data/ir/pki/ca.crt.pem /etc/nginx/pki/ca.crt.pem
-              cp /data/ir/pki/server.crt.pem /etc/nginx/pki/server.crt.pem
-              cp /data/ir/pki/server.key.pem /etc/nginx/pki/server.key.pem
+              if test -s /tls/tls.crt && test -s /tls/tls.key; then
+                # External/public cert for dfir.skplanet.com (recommended)
+                cp /tls/tls.crt /etc/nginx/pki/server.crt.pem
+                cp /tls/tls.key /etc/nginx/pki/server.key.pem
+              else
+                # Fallback: internal bootstrap PKI (works, but clients must trust internal CA)
+                cp /data/ir/pki/server.crt.pem /etc/nginx/pki/server.crt.pem
+                cp /data/ir/pki/server.key.pem /etc/nginx/pki/server.key.pem
+              fi
               exec nginx -g 'daemon off;'
           volumeMounts:
             - name: data
@@ -49,6 +64,8 @@ spec:
             - name: nginx-conf
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
+            - name: gateway-tls
+              mountPath: /tls
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -59,4 +76,8 @@ spec:
             items:
               - key: nginx.conf
                 path: nginx.conf
+        - name: gateway-tls
+          secret:
+            secretName: ir-gateway-tls
+            optional: true
 

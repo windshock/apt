@@ -31,6 +31,7 @@ This will also create:
 Network (local compose):
 - `https://localhost:443`: Orchestrator API (mTLS required; shared key still required in MVP)
 - `https://localhost:8443`: Enrollment-only endpoints (no client cert; shared key required)
+  - Bootstrap assets (no client cert): `/bootstrap/ca.crt.pem`, `/bootstrap/windows/*.ps1`
 
 3) Create a case (simulate Cybereason trigger):
 
@@ -122,6 +123,15 @@ in **run-once** mode periodically + at startup/logon:
 - `ir/agent/windows/run_ir_agent.ps1`
 - `ir/agent/windows/install_schtask.ps1`
 - `ir/agent/windows/uninstall_schtask.ps1`
+
+Alternatively (recommended): download them from the DFIR server (bootstrap port, no client cert):
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri "https://dfir.skplanet.com:8443/bootstrap/windows/install_ir_agent.ps1" -OutFile .\install_ir_agent.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://dfir.skplanet.com:8443/bootstrap/windows/run_ir_agent.ps1" -OutFile .\run_ir_agent.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://dfir.skplanet.com:8443/bootstrap/windows/install_schtask.ps1" -OutFile .\install_schtask.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://dfir.skplanet.com:8443/bootstrap/windows/uninstall_schtask.ps1" -OutFile .\uninstall_schtask.ps1
+```
 
 2) Install config + firewall rule:
 

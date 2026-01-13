@@ -39,8 +39,16 @@ def can_reach_enroll(enroll_url: str, shared_key: str, timeout: float = 3.0) -> 
     """
     try:
         verify = os.getenv("IR_TLS_CA")
+        base = enroll_url.rstrip("/")
+
+        # Prefer unauthenticated bootstrap CA endpoint (served via gateway enroll port).
+        r = requests.get(base + "/bootstrap/ca.crt.pem", timeout=timeout, verify=verify or True)
+        if r.status_code == 200:
+            return True
+
+        # Backward compatible: legacy endpoint requires shared key and returns JSON.
         r = requests.get(
-            enroll_url.rstrip("/") + "/v1/pki/ca.crt.pem",
+            base + "/v1/pki/ca.crt.pem",
             timeout=timeout,
             verify=verify or True,
             headers={"X-IR-Key": shared_key},

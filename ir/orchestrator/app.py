@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 
 from ir.common.models import (
     AgentJoinRequest,
@@ -29,6 +29,19 @@ def _case_key(endpoint_id: str, malop_id: str) -> str:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _repo_root() -> Path:
+    """
+    Best-effort repo root locator for bootstrap artifact endpoints.
+    In our container image we `COPY . /work`, so this typically resolves to `/work`.
+    """
+    # app.py -> orchestrator -> ir -> <repo root>
+    return Path(__file__).resolve().parents[2]
+
+
+def _windows_bootstrap_dir() -> Path:
+    return (_repo_root() / "ir" / "agent" / "windows").resolve()
 
 
 def _default_work_order(*, settings: Settings, case_id: str, agent: dict | None) -> WorkOrder:
@@ -238,6 +251,56 @@ def create_app() -> FastAPI:
     @app.get("/v1/pki/ca.crt.pem")
     async def get_ca_cert(_key: str = Depends(_auth_dep)):
         return {"ca_pem": ca.ca_pem().decode("utf-8")}
+
+    # Bootstrap endpoints (no client cert). Intended to be exposed ONLY via gateway's enroll port (8443).
+    @app.get("/bootstrap/ca.crt.pem")
+    async def bootstrap_ca_cert():
+        # CA public cert is not a secret; this enables "download CA + run installer from dfir.skplanet.com".
+        return FileResponse(path=str(ca.paths.ca_cert), media_type="application/x-pem-file", filename="ca.crt.pem")
+
+    @app.get("/bootstrap/windows/install_ir_agent.ps1")
+    async def bootstrap_windows_install_ps1():
+        p = _windows_bootstrap_dir() / "install_ir_agent.ps1"
+        if not p.exists():
+            raise HTTPException(status_code=404, detail="bootstrap asset not found")
+        return FileResponse(path=str(p), media_type="text/plain; charset=utf-8", filename="install_ir_agent.ps1")
+
+    @app.get("/bootstrap/windows/run_ir_agent.ps1")
+    async def bootstrap_windows_run_ps1():
+        p = _windows_bootstrap_dir() / "run_ir_agent.ps1"
+        if not p.exists():
+            raise HTTPException(status_code=404, detail="bootstrap asset not found")
+        return FileResponse(path=str(p), media_type="text/plain; charset=utf-8", filename="run_ir_agent.ps1")
+
+    @app.get("/bootstrap/windows/install_schtask.ps1")
+    async def bootstrap_windows_install_schtask_ps1():
+        p = _windows_bootstrap_dir() / "install_schtask.ps1"
+        if not p.exists():
+            raise HTTPException(status_code=404, detail="bootstrap asset not found")
+        return FileResponse(path=str(p), media_type="text/plain; charset=utf-8", filename="install_schtask.ps1")
+
+    @app.get("/bootstrap/windows/uninstall_schtask.ps1")
+    async def bootstrap_windows_uninstall_schtask_ps1():
+        p = _windows_bootstrap_dir() / "uninstall_schtask.ps1"
+        if not p.exists():
+            raise HTTPException(status_code=404, detail="bootstrap asset not found")
+        return FileResponse(path=str(p), media_type="text/plain; charset=utf-8", filename="uninstall_schtask.ps1")
+
+    @app.get("/bootstrap/windows/README.txt")
+    async def bootstrap_windows_readme():
+        txt = (
+            "IR Agent bootstrap (Windows)\n"
+            "\n"
+            "Download CA:\n"
+            "  GET /bootstrap/ca.crt.pem\n"
+            "\n"
+            "Download scripts:\n"
+            "  GET /bootstrap/windows/install_ir_agent.ps1\n"
+            "  GET /bootstrap/windows/run_ir_agent.ps1\n"
+            "  GET /bootstrap/windows/install_schtask.ps1\n"
+            "  GET /bootstrap/windows/uninstall_schtask.ps1\n"
+        )
+        return PlainTextResponse(content=txt, media_type="text/plain; charset=utf-8")
 
     @app.post("/v1/pki/enroll")
     async def enroll_client_cert(request: Request, _key: str = Depends(_auth_dep)):

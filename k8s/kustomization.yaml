@@ -19,5 +19,5 @@ resources:
 images:
   - name: dev.pcr.kr/1004276/apt-ir
     newName: dev.pcr.kr/1004276/apt-ir
-    newTag: amd64-20260113-162821
+    newTag: amd64-20260113-163249
 

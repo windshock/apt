@@ -64,6 +64,10 @@ kubectl -n ir create secret tls ir-gateway-tls \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
+Important:
+- Kubernetes TLS secrets typically expect an **unencrypted** private key.
+- If your key is encrypted (PEM shows `ENCRYPTED`), decrypt it first and use the decrypted output as `--key`.
+
 Then restart the gateway:
 
 ```bash

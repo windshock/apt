@@ -25,7 +25,15 @@ spec:
               set -euo pipefail
               mkdir -p /data/ir /data/ir/pki
               python3 /work/ir/scripts/bootstrap_pki.py --pki-dir /data/ir/pki --hosts 'dfir.skplanet.com,localhost,ir-gateway'
+              # Bootstrap a worker client cert so MemProcFS can authenticate to LeechAgent gRPC (mTLS).
+              mkdir -p /data/ir/mtls/host-01
+              python3 /work/ir/scripts/bootstrap_worker_mtls.py --pki-dir /data/ir/pki --out-dir /data/ir/mtls/host-01 --cn host-01
               python3 /work/scripts/yaraify_buckets_from_md.py --in /work/yaraify_rules_classification.md --out /data/ir/yarahub_buckets.json
+              # Download Yaraify (YaraHub) source rules to shared PVC (no compiled artifact required).
+              mkdir -p /data/yaraify/rules /data/yaraify/out
+              cd /data/yaraify
+              curl -fsSL -L -o yaraify-rules.zip "https://yaraify.abuse.ch/yarahub/yaraify-rules.zip"
+              unzip -q -o yaraify-rules.zip -d rules
           volumeMounts:
             - name: data
               mountPath: /data

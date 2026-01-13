@@ -1185,37 +1185,31 @@ def main() -> int:
         stats.setdefault("memprocfs", {})["keepalive"] = keepalive_stats
 
     try:
-        if compiled_path.exists() and target_path.exists():
-            # If we're using MemProcFS, prefer built-in YaraSearch module instead of
-            # scanning the FUSE filesystem tree with yara -r (too slow/huge).
-            if memprocfs_mount is not None:
-                # Prefer a smaller HIGH+MID-only ruleset to reduce scan time.
-                rules_for_mem = compiled_path
-                try:
-                    if buckets_path.exists():
-                        rules_for_mem = ensure_high_mid_rules_merged(
-                            buckets_path=buckets_path,
-                            rules_dir=Path("/data/yaraify/rules"),
-                            out_dir=Path("/data/yaraify/out"),
-                        )
-                        stats.setdefault("memprocfs", {}).setdefault(
-                            "ruleset",
-                            {"mode": "high_mid_merged", "path": str(rules_for_mem)},
-                        )
-                except Exception as e:
-                    stats.setdefault("memprocfs", {}).setdefault(
-                        "ruleset",
-                        {"mode": "fallback_ruleset", "path": str(rules_for_mem), "error": f"{type(e).__name__}: {e}"},
-                    )
+        raw_hits: list[tuple[str, str]] = []
 
-                # Prefer scanning actual physmem-backed ranges (avoids large holes in addr space).
+        if memprocfs_mount is not None:
+            # MemProcFS path: do NOT require a compiled ruleset. We feed a merged source .yar
+            # to vmmyara FS_YaraSearch for max compatibility.
+            rules_for_mem = None
+            try:
+                rules_for_mem = ensure_high_mid_rules_merged(
+                    buckets_path=buckets_path,
+                    rules_dir=Path("/data/yaraify/rules"),
+                    out_dir=Path("/data/yaraify/out"),
+                )
+                stats.setdefault("memprocfs", {}).setdefault("ruleset", {"mode": "high_mid_merged", "path": str(rules_for_mem)})
+            except Exception as e:
+                stats.setdefault("memprocfs", {}).setdefault("ruleset_error", f"{type(e).__name__}: {e}")
+
+            if not rules_for_mem or not Path(rules_for_mem).exists():
+                stats.update({"scan_skipped": True, "reason": "memprocfs_rules_missing", "rules_dir": "/data/yaraify/rules"})
+            else:
                 phys_ranges, phys_stats = _read_physmemmap_ranges(mount_dir=memprocfs_mount)
                 stats.setdefault("memprocfs", {}).setdefault("physmemmap", phys_stats)
-
                 if phys_ranges:
                     raw_hits, mp_yara_stats = run_memprocfs_yara_search_over_ranges(
                         mount_dir=memprocfs_mount,
-                        rules_file=rules_for_mem,
+                        rules_file=Path(rules_for_mem),
                         ranges=phys_ranges,
                         timeout_seconds=float((wo.memprocfs or {}).get("yara_timeout_seconds") or 0),
                         stall_timeout_seconds=float((wo.memprocfs or {}).get("yara_stall_timeout_seconds") or 180),
@@ -1223,39 +1217,36 @@ def main() -> int:
                 else:
                     raw_hits, mp_yara_stats = run_memprocfs_yara_search(
                         mount_dir=memprocfs_mount,
-                        rules_file=rules_for_mem,
+                        rules_file=Path(rules_for_mem),
                         timeout_seconds=float((wo.memprocfs or {}).get("yara_timeout_seconds") or 0),
                         stall_timeout_seconds=float((wo.memprocfs or {}).get("yara_stall_timeout_seconds") or 180),
                     )
-
                 stats.setdefault("memprocfs", {}).setdefault("yara_search", mp_yara_stats)
-                # Record scan target as the memprocfs mount (even though hits contain address lines).
                 stats["scan_target"] = str(memprocfs_mount)
-            else:
+        else:
+            # Fallback filesystem scan: requires a compiled ruleset + scan target directory.
+            if compiled_path.exists() and target_path.exists():
                 raw_hits = run_yara_scan(compiled=compiled_path, target=target_path)
                 stats["scan_target"] = str(target_path)
+                stats["yara_compiled"] = str(compiled_path)
+            else:
+                stats.update(
+                    {
+                        "scan_skipped": True,
+                        "yara_compiled_exists": compiled_path.exists(),
+                        "scan_target_exists": target_path.exists(),
+                    }
+                )
 
-            kept = 0
-            for rule, tgt in raw_hits:
-                lvl = rule_level(rule, buckets)
-                if lvl and lvl in wo.yara_levels:
-                    kept += 1
-                    hits_out.append({"rule": rule, "level": lvl.value, "target": tgt, "meta": {}})
-            stats.update(
-                {
-                    "yara_compiled": str(compiled_path),
-                    "raw_hit_count": len(raw_hits),
-                    "kept_hit_count": kept,
-                }
-            )
-        else:
-            stats.update(
-                {
-                    "scan_skipped": True,
-                    "yara_compiled_exists": compiled_path.exists(),
-                    "scan_target_exists": target_path.exists(),
-                }
-            )
+        kept = 0
+        for rule, tgt in raw_hits:
+            lvl = rule_level(rule, buckets)
+            if lvl and lvl in wo.yara_levels:
+                kept += 1
+                hits_out.append({"rule": rule, "level": lvl.value, "target": tgt, "meta": {}})
+        if raw_hits:
+            stats["raw_hit_count"] = len(raw_hits)
+            stats["kept_hit_count"] = kept
     finally:
         if keepalive_stop is not None:
             keepalive_stop.set()

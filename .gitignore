@@ -49,4 +49,7 @@ dist/
 # Harbor robot tokens / secrets (do not commit)
 robot$*.json
 
+# kubeconfig (do not commit)
+kubeconfig
+
 

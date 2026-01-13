@@ -45,6 +45,19 @@ New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir "mtls") | Out-N
 
 Use-Tls12
 
+$AgentIp = $AgentIp.Trim()
+if (-not $AgentIp -or $AgentIp.Length -eq 0) {
+  # Best-effort auto-detect a usable IPv4 (avoid loopback/APIPA).
+  try {
+    $ips = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+      Where-Object { $_.IPAddress -and $_.IPAddress -ne "127.0.0.1" -and -not $_.IPAddress.StartsWith("169.254.") } |
+      Sort-Object -Property InterfaceMetric, PrefixLength
+    if ($ips -and $ips.Count -gt 0) {
+      $AgentIp = $ips[0].IPAddress
+    }
+  } catch {}
+}
+
 $bootstrap = $BootstrapUrl
 if (-not $bootstrap -or $bootstrap.Trim().Length -eq 0) { $bootstrap = $EnrollUrl }
 $bootstrap = $bootstrap.TrimEnd("/")

@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import time
+from urllib.parse import urlparse
 from typing import Any
 
 import requests
@@ -68,6 +69,27 @@ def internet_is_blocked(probe_url: str, timeout: float = 2.0) -> bool:
         return r.status_code < 200 or r.status_code >= 400
     except Exception:
         return True
+
+
+def detect_local_ip_for_target(target_url: str) -> str | None:
+    """
+    Best-effort local IPv4 discovery by creating a UDP socket "connected" to the target host.
+    This does not send packets but allows the OS to pick a route and source IP.
+    """
+    try:
+        u = urlparse(target_url)
+        host = u.hostname
+        if not host:
+            return None
+        port = int(u.port or (443 if u.scheme == "https" else 80))
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((host, port))
+            ip = s.getsockname()[0]
+        if ip and ip != "0.0.0.0":
+            return ip
+        return None
+    except Exception:
+        return None
 
 
 def _headers(key: str, method: str, path: str, body: bytes, require_sig: bool) -> dict[str, str]:
@@ -294,6 +316,8 @@ def main() -> int:
             return 5
 
     ip_val = (args.ip or "").strip() or None
+    if not ip_val:
+        ip_val = detect_local_ip_for_target(args.orch_url) or None
     payload = {"agent_id": args.agent_id, "hostname": args.hostname, "ip": ip_val, "capabilities": {}}
 
     if args.fetch_leechagent_tls:

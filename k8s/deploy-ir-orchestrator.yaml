@@ -17,7 +17,7 @@ spec:
         - name: harbor-regcred
       containers:
         - name: orchestrator
-          image: dev.pcr.kr/dfir/apt-ir:latest
+          image: dev.pcr.kr/1004276/apt-ir:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

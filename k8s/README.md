@@ -13,13 +13,13 @@ on Kubernetes as a PoC.
 
 Pick an image repo and tag, e.g.:
 
-- `IMAGE_REPO=dev.pcr.kr/dfir/apt-ir`
+- `IMAGE_REPO=dev.pcr.kr/1004276/apt-ir`
 - `IMAGE_TAG=dev-$(date +%Y%m%d-%H%M%S)`
 
 Then:
 
 ```bash
-export IMAGE_REPO="dev.pcr.kr/dfir/apt-ir"
+export IMAGE_REPO="dev.pcr.kr/1004276/apt-ir"
 export IMAGE_TAG="dev-$(date +%Y%m%d-%H%M%S)"
 
 # login without echoing secrets:
@@ -48,6 +48,14 @@ Edit `k8s/kustomization.yaml` to set the image repo/tag, then:
 ```bash
 kubectl apply -k k8s/
 ```
+
+### Storage (NAS / NFS)
+
+This PoC uses a shared RWX volume so `ir-init`, `ir-orchestrator`, and `ir-gateway` can share `/data/ir/*`.
+We provide a static NFS PV/PVC example:
+
+- PV: `k8s/pv-ir-nfs.yaml` (server/path must match your NAS export)
+- PVC: `k8s/pvc-ir.yaml` binds to that PV (`volumeName`)
 
 ### UI
 

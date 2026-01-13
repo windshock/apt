@@ -6,6 +6,7 @@ namespace: ir
 resources:
   - namespace.yaml
   - secret-ir.yaml
+  - pv-ir-nfs.yaml
   - pvc-ir.yaml
   - job-ir-init.yaml
   - deploy-ir-orchestrator.yaml
@@ -16,7 +17,7 @@ resources:
   - svc-ir-gateway.yaml
 
 images:
-  - name: dev.pcr.kr/dfir/apt-ir
-    newName: dev.pcr.kr/dfir/apt-ir
+  - name: dev.pcr.kr/1004276/apt-ir
+    newName: dev.pcr.kr/1004276/apt-ir
     newTag: latest
 

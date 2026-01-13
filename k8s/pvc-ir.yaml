@@ -5,10 +5,11 @@ metadata:
   namespace: ir
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 50Gi
-  # Set your cluster StorageClass here if needed:
-  # storageClassName: standard
+  # Static NFS PV binding (see pv-ir-nfs.yaml)
+  volumeName: ir-data-nfs
+  storageClassName: ""
 

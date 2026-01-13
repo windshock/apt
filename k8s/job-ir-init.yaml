@@ -12,7 +12,7 @@ spec:
         - name: harbor-regcred
       containers:
         - name: init
-          image: dev.pcr.kr/dfir/apt-ir:latest
+          image: dev.pcr.kr/1004276/apt-ir:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: IR_DATA_DIR
